@@ -2,7 +2,7 @@ import gems from "../src/data/gems.js";
 import { rollGem } from "../src/logic/rolling.js";
 
 const ROLLS = 1_000_000;
-const LUCK = 1;
+const LUCK = 2.5;
 
 const results = {};
 
