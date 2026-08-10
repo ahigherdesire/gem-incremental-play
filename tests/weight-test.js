@@ -1,6 +1,7 @@
 import { rollWeightMultiplier } from "../src/logic/weight.js";
 
 const ROLLS = 5_000_000;
+const WEIGHT_LUCK = 2.25;
 
 const bands = {
   "0.50x–0.85x": 0,
@@ -27,7 +28,7 @@ let lowest = Infinity;
 let highest = -Infinity;
 
 for (let i = 0; i < ROLLS; i++) {
-  const weight = rollWeightMultiplier();
+  const weight = rollWeightMultiplier(WEIGHT_LUCK);
 
   totalMultiplier += weight;
   lowest = Math.min(lowest, weight);
@@ -55,7 +56,7 @@ for (let i = 0; i < ROLLS; i++) {
 }
 
 console.log(
-  `\nResults from ${ROLLS.toLocaleString()} weight rolls:\n`
+  `\nResults from ${ROLLS.toLocaleString()} weight rolls at ${WEIGHT_LUCK}x Weight Luck:\n`
 );
 
 console.log("MAIN DISTRIBUTION\n");
