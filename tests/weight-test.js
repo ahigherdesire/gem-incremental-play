@@ -1,7 +1,7 @@
 import { rollWeightMultiplier } from "../src/logic/weight.js";
 
 const ROLLS = 5_000_000;
-const WEIGHT_LUCK = 2.25;
+const WEIGHT_LUCK = 1;
 
 const bands = {
   "0.50x–0.85x": 0,
