@@ -521,38 +521,23 @@ function renderRecipes() {
               "click",
               () => {
                 const recipeId =
-                  button.dataset
-                    .recipe;
-
+                  button.dataset.recipe;
+            
                 const requirementIndex =
                   Number(
                     button.dataset.requirementIndex
                   );
-                
-                const deposited =
-                  manuallyDepositRequirement(
-                    craftingState,
-                    selectedRecipe,
-                    inventory,
-                    requirementIndex
-                  );
-
+            
                 const selectedRecipe =
                   recipes.find(
                     (recipe) =>
-                      recipe.id ===
-                      recipeId
+                      recipe.id === recipeId
                   );
-
+            
                 if (!selectedRecipe) {
                   return;
                 }
-
-                const requirementIndex =
-                  Number(
-                    button.dataset.requirementIndex
-                  );
-                
+            
                 const deposited =
                   manuallyDepositRequirement(
                     craftingState,
@@ -560,19 +545,14 @@ function renderRecipes() {
                     inventory,
                     requirementIndex
                   );
-
+            
                 if (!deposited) {
                   return;
                 }
-
-                saveInventory(
-                  inventory
-                );
-
-                saveCraftingState(
-                  craftingState
-                );
-
+            
+                saveInventory(inventory);
+                saveCraftingState(craftingState);
+            
                 renderRecipes();
               }
             );
