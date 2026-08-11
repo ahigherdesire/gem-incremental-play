@@ -6,16 +6,28 @@ import {
   isInventoryFull
 } from "./src/logic/inventory.js";
 
+import recipes from "./src/data/recipes.js";
+
+import {
+  createCraftingState,
+  tryAutoDeposit
+} from "./src/logic/crafting.js";
+
 import {
   saveInventory,
   loadInventory,
   saveCooldownEnd,
   loadCooldownEnd,
-  clearCooldownEnd
+  clearCooldownEnd,
+  saveCraftingState,
+  loadCraftingState
 } from "./src/logic/storage.js";
 
-const rollButton = document.getElementById("rollButton");
-const result = document.getElementById("result");
+const rollButton =
+  document.getElementById("rollButton");
+
+const result =
+  document.getElementById("result");
 
 const playerStats = {
   luck: 1,
@@ -25,7 +37,12 @@ const playerStats = {
 };
 
 let inventory =
-  loadInventory() ?? createInventory();
+  loadInventory() ??
+  createInventory();
+
+let craftingState =
+  loadCraftingState() ??
+  createCraftingState();
 
 let cooldownTimer = null;
 
@@ -40,7 +57,14 @@ function getCooldownMs() {
 
 function refreshInventory() {
   inventory =
-    loadInventory() ?? createInventory();
+    loadInventory() ??
+    createInventory();
+}
+
+function refreshCraftingState() {
+  craftingState =
+    loadCraftingState() ??
+    createCraftingState();
 }
 
 function showReadyButton() {
@@ -48,10 +72,12 @@ function showReadyButton() {
 
   if (isInventoryFull(inventory)) {
     rollButton.disabled = true;
-    rollButton.textContent = "INVENTORY FULL";
+    rollButton.textContent =
+      "INVENTORY FULL";
   } else {
     rollButton.disabled = false;
-    rollButton.textContent = "ROLL";
+    rollButton.textContent =
+      "ROLL";
   }
 }
 
@@ -68,9 +94,11 @@ function startCooldown(cooldownEnd) {
 
     if (remaining <= 0) {
       clearInterval(cooldownTimer);
+
       cooldownTimer = null;
 
       clearCooldownEnd();
+
       showReadyButton();
 
       return;
@@ -88,6 +116,7 @@ function startCooldown(cooldownEnd) {
 
 function restoreGameState() {
   refreshInventory();
+  refreshCraftingState();
 
   const cooldownEnd =
     loadCooldownEnd();
@@ -103,73 +132,127 @@ function restoreGameState() {
   }
 }
 
-rollButton.addEventListener("click", () => {
-  refreshInventory();
+rollButton.addEventListener(
+  "click",
+  () => {
+    refreshInventory();
+    refreshCraftingState();
 
-  if (isInventoryFull(inventory)) {
-    showReadyButton();
-    return;
+    const cooldownEnd =
+      loadCooldownEnd();
+
+    if (
+      cooldownEnd &&
+      cooldownEnd > Date.now()
+    ) {
+      startCooldown(cooldownEnd);
+      return;
+    }
+
+    const rolled =
+      rollResult(
+        playerStats.luck,
+        playerStats.weightLuck,
+        playerStats.weightMultiplier
+      );
+
+    let autoDeposited = false;
+
+    if (
+      craftingState.activeAutoCraftRecipeId
+    ) {
+      const activeRecipe =
+        recipes.find(
+          (recipe) =>
+            recipe.id ===
+            craftingState
+              .activeAutoCraftRecipeId
+        );
+
+      if (activeRecipe) {
+        autoDeposited =
+          tryAutoDeposit(
+            craftingState,
+            activeRecipe,
+            rolled
+          );
+
+        if (autoDeposited) {
+          saveCraftingState(
+            craftingState
+          );
+        }
+      }
+    }
+
+    if (!autoDeposited) {
+      if (isInventoryFull(inventory)) {
+        showReadyButton();
+        return;
+      }
+
+      const added =
+        addToInventory(
+          inventory,
+          rolled
+        );
+
+      if (!added) {
+        showReadyButton();
+        return;
+      }
+
+      saveInventory(inventory);
+    }
+
+    result.innerHTML = `
+      <h2>${rolled.gem.name}</h2>
+
+      <p>
+        Rarity:
+        1 in ${rolled.gem.rarity.toLocaleString()}
+      </p>
+
+      <p>
+        Weight:
+        ${rolled.finalWeight.toFixed(2)}g
+        (${rolled.weightMultiplier.toFixed(3)}x)
+      </p>
+
+      <p>
+        Value:
+        $${rolled.value.toFixed(2)}
+      </p>
+
+      ${
+        autoDeposited
+          ? `
+            <p>
+              Auto-deposited into crafting.
+            </p>
+          `
+          : `
+            <p>
+              Inventory:
+              ${inventory.items.length}/${inventory.capacity}
+            </p>
+          `
+      }
+    `;
+
+    const newCooldownEnd =
+      Date.now() +
+      getCooldownMs();
+
+    saveCooldownEnd(
+      newCooldownEnd
+    );
+
+    startCooldown(
+      newCooldownEnd
+    );
   }
-
-  const cooldownEnd =
-    loadCooldownEnd();
-
-  if (
-    cooldownEnd &&
-    cooldownEnd > Date.now()
-  ) {
-    startCooldown(cooldownEnd);
-    return;
-  }
-
-  const rolled = rollResult(
-    playerStats.luck,
-    playerStats.weightLuck,
-    playerStats.weightMultiplier
-  );
-
-  const added =
-    addToInventory(inventory, rolled);
-
-  if (!added) {
-    showReadyButton();
-    return;
-  }
-
-  saveInventory(inventory);
-
-  result.innerHTML = `
-    <h2>${rolled.gem.name}</h2>
-
-    <p>
-      Rarity:
-      1 in ${rolled.gem.rarity.toLocaleString()}
-    </p>
-
-    <p>
-      Weight:
-      ${rolled.finalWeight.toFixed(2)}g
-      (${rolled.weightMultiplier.toFixed(3)}x)
-    </p>
-
-    <p>
-      Value:
-      $${rolled.value.toFixed(2)}
-    </p>
-
-    <p>
-      Inventory:
-      ${inventory.items.length}/${inventory.capacity}
-    </p>
-  `;
-
-  const newCooldownEnd =
-    Date.now() + getCooldownMs();
-
-  saveCooldownEnd(newCooldownEnd);
-
-  startCooldown(newCooldownEnd);
-});
+);
 
 window.addEventListener(
   "pageshow",
