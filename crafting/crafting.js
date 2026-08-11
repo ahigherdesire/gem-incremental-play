@@ -134,8 +134,25 @@ function formatRequirementProgress(
     case "specimen-value-total":
       return `$${(progressValue ?? 0).toFixed(2)} / $${requirement.totalValue.toFixed(2)}`;
 
-    case "rarity-points":
-      return `${progressValue?.points ?? 0} / ${requirement.points}`;
+    case "rarity-points": {
+      const points =
+        progressValue?.points ?? 0;
+    
+      const unique =
+        progressValue?.gemTypes?.length ?? 0;
+    
+      const minimumUnique =
+        requirement.minimumUniqueGemTypes ?? 0;
+    
+      if (minimumUnique > 0) {
+        return (
+          `${points} / ${requirement.points} points` +
+          ` | ${unique} / ${minimumUnique} gem types`
+        );
+      }
+    
+      return `${points} / ${requirement.points}`;
+    }
 
     case "gem-range": {
       const current = progressValue ?? {};
