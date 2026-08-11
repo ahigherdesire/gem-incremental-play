@@ -351,53 +351,6 @@ function renderRecipes() {
           `;
         })
         .join("");
-    const equipmentRequirementsHtml =
-      recipe.requirements
-        .filter(
-          (requirement) =>
-            requirement.type ===
-            "equipment"
-        )
-        .map((requirement) => {
-          const requiredEquipment =
-            inventory.equipment.find(
-              (equipment) =>
-                equipment.id ===
-                requirement.equipmentId
-            );
-
-          const requirementMet =
-            Boolean(requiredEquipment);
-
-          const requiredRecipe =
-            recipes.find(
-              (otherRecipe) =>
-                otherRecipe.reward?.id ===
-                requirement.equipmentId
-            );
-
-          const requiredName =
-            requiredRecipe?.reward?.name ??
-            requirement.equipmentId;
-
-          return `
-            <div class="requirement">
-              <span>
-                Required:
-                ${requiredName}
-              </span>
-
-              <span>
-                ${
-                  requirementMet
-                    ? "✓"
-                    : "✗"
-                }
-              </span>
-            </div>
-          `;
-        })
-        .join("");
 
     const moneyComplete =
       player.money >=
@@ -448,7 +401,6 @@ function renderRecipes() {
           `
           : `
             <div class="requirements">
-              ${equipmentRequirementsHtml}
               ${requirementsHtml}
 
               <div class="requirement">
