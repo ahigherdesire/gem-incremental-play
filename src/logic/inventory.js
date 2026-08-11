@@ -53,7 +53,6 @@ export function getGemCount(inventory) {
 
 export function addEquipment(inventory, equipment) {
   inventory.equipment.push(equipment);
-
   return true;
 }
 
