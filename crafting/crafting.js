@@ -88,6 +88,7 @@ function craftRecipe(recipe) {
   player.money -=
     recipe.moneyCost;
 
+  // Consume previous equipment if the recipe requires it
   for (const requirement of recipe.requirements) {
     if (
       requirement.type ===
@@ -99,7 +100,7 @@ function craftRecipe(recipe) {
             equipment.id ===
             requirement.equipmentId
         );
-  
+
       if (index !== -1) {
         inventory.equipment.splice(
           index,
@@ -109,6 +110,7 @@ function craftRecipe(recipe) {
     }
   }
 
+  // Add and auto-equip the newly crafted equipment
   addEquipment(
     inventory,
     {
@@ -176,7 +178,6 @@ function renderRecipes() {
               <span>
                 ${current} /
                 ${requirement.amount}
-
                 ${complete ? "✓" : ""}
 
                 ${
@@ -192,6 +193,54 @@ function renderRecipes() {
                       </button>
                     `
                     : ""
+                }
+              </span>
+            </div>
+          `;
+        })
+        .join("");
+
+    const equipmentRequirementsHtml =
+      recipe.requirements
+        .filter(
+          (requirement) =>
+            requirement.type ===
+            "equipment"
+        )
+        .map((requirement) => {
+          const requiredEquipment =
+            inventory.equipment.find(
+              (equipment) =>
+                equipment.id ===
+                requirement.equipmentId
+            );
+
+          const requirementMet =
+            Boolean(requiredEquipment);
+
+          const requiredRecipe =
+            recipes.find(
+              (otherRecipe) =>
+                otherRecipe.reward?.id ===
+                requirement.equipmentId
+            );
+
+          const requiredName =
+            requiredRecipe?.reward?.name ??
+            requirement.equipmentId;
+
+          return `
+            <div class="requirement">
+              <span>
+                Required:
+                ${requiredName}
+              </span>
+
+              <span>
+                ${
+                  requirementMet
+                    ? "✓"
+                    : "✗"
                 }
               </span>
             </div>
@@ -248,6 +297,7 @@ function renderRecipes() {
           `
           : `
             <div class="requirements">
+              ${equipmentRequirementsHtml}
               ${requirementsHtml}
 
               <div class="requirement">
@@ -334,9 +384,7 @@ function renderRecipes() {
                       recipeId
                   );
 
-                if (
-                  !selectedRecipe
-                ) {
+                if (!selectedRecipe) {
                   return;
                 }
 
@@ -348,9 +396,7 @@ function renderRecipes() {
                     gemName
                   );
 
-                if (
-                  !deposited
-                ) {
+                if (!deposited) {
                   return;
                 }
 
