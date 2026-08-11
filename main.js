@@ -178,7 +178,7 @@ rollButton.addEventListener(
       );
       recordRoll(
         player,
-        rolled.gem
+        rolled
       );
 
     let autoDeposited = false;
