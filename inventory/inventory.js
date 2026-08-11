@@ -8,16 +8,30 @@ import {
   saveInventory
 } from "../src/logic/storage.js";
 
+import {
+  createPlayer,
+  loadPlayer,
+  savePlayer
+} from "../src/logic/player.js";
+
 const inventoryCount =
   document.getElementById("inventoryCount");
+
+const moneyDisplay =
+  document.getElementById("money");
 
 const inventoryList =
   document.getElementById("inventoryList");
 
 let inventory = loadInventory();
 
+let player =
+  loadPlayer() ?? createPlayer();
+
 function renderInventory() {
   inventoryList.innerHTML = "";
+  moneyDisplay.textContent =
+  `$${player.money.toFixed(2)}`;
 
   if (!inventory) {
     inventoryCount.textContent = "0 / 15";
@@ -53,8 +67,8 @@ function renderInventory() {
         ${item.locked ? "🔒 Locked" : "🔓 Unlocked"}
       </button>
 
-      <button class="remove-button">
-        Remove
+      <button class="sell-button">
+        Sell
       </button>
     `;
 
@@ -65,11 +79,21 @@ function renderInventory() {
         renderInventory();
       });
 
-    card.querySelector(".remove-button")
+    card.querySelector(".sell-button")
       .addEventListener("click", () => {
         if (item.locked) {
           return;
         }
+
+        player.money += item.value;
+    
+        removeFromInventory(inventory, index);
+    
+        saveInventory(inventory);
+        savePlayer(player);
+    
+        renderInventory();
+      });
 
         removeFromInventory(inventory, index);
         saveInventory(inventory);
