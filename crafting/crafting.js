@@ -3,7 +3,8 @@ import recipes from "../src/data/recipes.js";
 import {
   createCraftingState,
   ensureRecipeProgress,
-  manuallyDepositGem,
+  manuallyDepositRequirement,
+  isRequirementComplete,
   isRecipeReady,
   resetRecipeProgress
 } from "../src/logic/crafting.js";
@@ -78,6 +79,80 @@ function formatBonuses(bonus = {}) {
   return bonuses.length > 0
     ? bonuses.join(", ")
     : "None";
+}
+
+function formatRequirementLabel(requirement) {
+  switch (requirement.type) {
+    case "gem-count":
+      return requirement.gem;
+
+    case "equipment":
+      return `Required: ${requirement.equipmentName ?? requirement.equipmentId}`;
+
+    case "gem-total-weight":
+      return `${requirement.gem} total weight`;
+
+    case "gem-min-weight-multiplier":
+      return `${requirement.gem} ≥ ${requirement.minimumWeightMultiplier}× weight`;
+
+    case "gem-max-weight-multiplier":
+      return `${requirement.gem} ≤ ${requirement.maximumWeightMultiplier}× weight`;
+
+    case "specimen-condition":
+      return requirement.label ?? "Special specimen";
+
+    case "specimen-value-total":
+      return "Sacrifice value";
+
+    case "rarity-points":
+      return "Rarity points";
+
+    case "gem-range":
+      return requirement.label ?? "Gem collection";
+
+    default:
+      return requirement.type;
+  }
+}
+
+function formatRequirementProgress(
+  requirement,
+  progressValue
+) {
+  switch (requirement.type) {
+    case "gem-count":
+      return `${progressValue ?? 0} / ${requirement.amount}`;
+
+    case "gem-total-weight":
+      return `${(progressValue ?? 0).toFixed(2)}g / ${requirement.totalWeight}g`;
+
+    case "gem-min-weight-multiplier":
+    case "gem-max-weight-multiplier":
+    case "specimen-condition":
+      return `${progressValue ?? 0} / ${requirement.amount ?? 1}`;
+
+    case "specimen-value-total":
+      return `$${(progressValue ?? 0).toFixed(2)} / $${requirement.totalValue.toFixed(2)}`;
+
+    case "rarity-points":
+      return `${progressValue?.points ?? 0} / ${requirement.points}`;
+
+    case "gem-range": {
+      const current = progressValue ?? {};
+
+      const completed =
+        requirement.gems.filter(
+          (gemName) =>
+            (current[gemName] ?? 0) >=
+            (requirement.amountEach ?? 1)
+        ).length;
+
+      return `${completed} / ${requirement.gems.length} gems`;
+    }
+
+    default:
+      return "";
+  }
 }
 
 function setAutoCraft(recipeId) {
@@ -189,32 +264,74 @@ function renderRecipes() {
 
     const requirementsHtml =
       recipe.requirements
-        .filter(
-          (requirement) =>
-            requirement.type ===
-            "gem-count"
-        )
-        .map((requirement) => {
-          const current =
-            progress[
-              requirement.gem
-            ] ?? 0;
-
+        .map((requirement, index) => {
+          if (requirement.type === "equipment") {
+            const requirementMet =
+              inventory.equipment.some(
+                (equipment) =>
+                  equipment.id ===
+                  requirement.equipmentId
+              );
+    
+            const requiredRecipe =
+              recipes.find(
+                (otherRecipe) =>
+                  otherRecipe.reward?.id ===
+                  requirement.equipmentId
+              );
+    
+            const requiredName =
+              requiredRecipe?.reward?.name ??
+              requirement.equipmentName ??
+              requirement.equipmentId;
+    
+            return `
+              <div class="requirement">
+                <span>
+                  Required: ${requiredName}
+                </span>
+    
+                <span>
+                  ${requirementMet ? "✓" : "✗"}
+                </span>
+              </div>
+            `;
+          }
+    
+          const key =
+            requirement.id ??
+            (
+              requirement.type === "gem-count"
+                ? requirement.gem
+                : `${requirement.type}-${index}`
+            );
+    
+          const value =
+            progress[key];
+    
           const complete =
-            current >=
-            requirement.amount;
-
+            isRequirementComplete(
+              craftingState,
+              recipe,
+              requirement,
+              index,
+              inventory
+            );
+    
           return `
             <div class="requirement">
               <span>
-                ${requirement.gem}
+                ${formatRequirementLabel(requirement)}
               </span>
-
+    
               <span>
-                ${current} /
-                ${requirement.amount}
+                ${formatRequirementProgress(
+                  requirement,
+                  value
+                )}
+    
                 ${complete ? "✓" : ""}
-
+    
                 ${
                   !complete &&
                   !owned
@@ -222,7 +339,7 @@ function renderRecipes() {
                       <button
                         class="deposit-button"
                         data-recipe="${recipe.id}"
-                        data-gem="${requirement.gem}"
+                        data-requirement-index="${index}"
                       >
                         Deposit
                       </button>
@@ -234,7 +351,6 @@ function renderRecipes() {
           `;
         })
         .join("");
-
     const equipmentRequirementsHtml =
       recipe.requirements
         .filter(
@@ -408,9 +524,18 @@ function renderRecipes() {
                   button.dataset
                     .recipe;
 
-                const gemName =
-                  button.dataset
-                    .gem;
+                const requirementIndex =
+                  Number(
+                    button.dataset.requirementIndex
+                  );
+                
+                const deposited =
+                  manuallyDepositRequirement(
+                    craftingState,
+                    selectedRecipe,
+                    inventory,
+                    requirementIndex
+                  );
 
                 const selectedRecipe =
                   recipes.find(
