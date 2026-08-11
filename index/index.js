@@ -104,6 +104,10 @@ function renderIndex() {
         $${baseValue.toFixed(2)}
       </p>
 
+      <p class="gem-description">
+        ${gem.description ?? "No description available."}
+      </p>
+
       <hr>
 
       <p>
