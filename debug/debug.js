@@ -119,6 +119,26 @@ function renderDebug() {
         ${(cooldownRemaining / 1000).toFixed(1)}s
       </p>
     </div>
+    <div class="debug-card">
+      <h2>Lifetime Stats</h2>
+    
+      <p>
+        Total Rolls:
+        ${player.stats?.totalRolls ?? 0}
+      </p>
+    
+      <p>
+        Rarest Gem:
+        ${
+          player.stats?.rarestGem
+            ? `
+              ${player.stats.rarestGem.name}
+              (1 in ${player.stats.rarestGem.rarity.toLocaleString()})
+            `
+            : "None yet"
+        }
+      </p>
+    </div>
   `;
 }
 
