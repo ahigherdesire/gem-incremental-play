@@ -138,6 +138,11 @@ rollButton.addEventListener(
     refreshInventory();
     refreshCraftingState();
 
+    if (isInventoryFull(inventory)) {
+      showReadyButton();
+      return;
+    }
+
     const cooldownEnd =
       loadCooldownEnd();
 
@@ -186,11 +191,6 @@ rollButton.addEventListener(
     }
 
     if (!autoDeposited) {
-      if (isInventoryFull(inventory)) {
-        showReadyButton();
-        return;
-      }
-
       const added =
         addToInventory(
           inventory,
