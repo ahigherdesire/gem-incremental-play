@@ -1,5 +1,9 @@
 import gems from "../data/gems.js";
 
+import {
+  random01
+} from "./random.js";
+
 /**
  * Rolls a gem using the player's current Luck.
  *
@@ -29,7 +33,7 @@ export function rollGem(luck = 1) {
     // Prevent probability from ever exceeding 100%.
     const chance = Math.min(safeLuck / gem.rarity, 1);
 
-    if (Math.random() < chance) {
+    if (random01() < chance) {
       return gem;
     }
   }
