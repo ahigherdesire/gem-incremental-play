@@ -117,3 +117,57 @@ export function manuallyDepositGem(
 
   return true;
 }
+
+export function isRecipeReady(
+  craftingState,
+  recipe,
+  player
+) {
+  const progress =
+    ensureRecipeProgress(
+      craftingState,
+      recipe
+    );
+
+  const gemsComplete =
+    recipe.requirements.every(
+      (requirement) => {
+        if (
+          requirement.type !==
+          "gem-count"
+        ) {
+          return true;
+        }
+
+        const current =
+          progress[requirement.gem] ?? 0;
+
+        return (
+          current >= requirement.amount
+        );
+      }
+    );
+
+  const moneyComplete =
+    player.money >= recipe.moneyCost;
+
+  return (
+    gemsComplete &&
+    moneyComplete
+  );
+}
+
+export function resetRecipeProgress(
+  craftingState,
+  recipeId
+) {
+  delete craftingState.progress[recipeId];
+
+  if (
+    craftingState.activeAutoCraftRecipeId ===
+    recipeId
+  ) {
+    craftingState.activeAutoCraftRecipeId =
+      null;
+  }
+}
