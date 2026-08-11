@@ -69,7 +69,7 @@ function craftRecipe(recipe) {
   if (
     hasEquipmentTierOrHigher(
       inventory,
-      recipe.reward.id
+      recipe.reward.category,
       recipe.reward.tier
     )
   ) {
