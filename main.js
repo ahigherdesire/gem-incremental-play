@@ -18,6 +18,12 @@ import {
 } from "./src/logic/playerStats.js";
 
 import {
+  createPlayer,
+  loadPlayer,
+  recordRoll
+} from "./src/logic/player.js";
+
+import {
   saveInventory,
   loadInventory,
   saveCooldownEnd,
@@ -40,6 +46,10 @@ let inventory =
 let craftingState =
   loadCraftingState() ??
   createCraftingState();
+
+let player =
+  loadPlayer() ??
+  createPlayer();
 
 let cooldownTimer = null;
 
@@ -165,6 +175,10 @@ rollButton.addEventListener(
         stats.luck,
         stats.weightLuck,
         stats.weightMultiplier
+      );
+      recordRoll(
+        player,
+        rolled.gem
       );
 
     let autoDeposited = false;
