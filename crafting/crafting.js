@@ -149,9 +149,9 @@ function renderRecipes() {
       );
 
     const owned =
-      hasEquipment(
+      hasEquipmentTierOrHigher(
         inventory,
-        recipe.reward.id
+        recipe.reward.category,
         recipe.reward.tier
       );
 
