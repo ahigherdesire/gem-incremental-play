@@ -168,3 +168,18 @@ export function isRecipeReady(
     moneyComplete
   );
 }
+
+export function resetRecipeProgress(
+  craftingState,
+  recipeId
+) {
+  delete craftingState.progress[recipeId];
+
+  if (
+    craftingState.activeAutoCraftRecipeId ===
+    recipeId
+  ) {
+    craftingState.activeAutoCraftRecipeId =
+      null;
+  }
+}
