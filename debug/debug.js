@@ -30,7 +30,7 @@ function renderDebug() {
     createInventory();
 
   const stats =
-  getPlayerStats(inventory);
+    getPlayerStats(inventory);
 
   const craftingState =
     loadCraftingState() ??
