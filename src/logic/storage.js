@@ -1,26 +1,11 @@
-const INVENTORY_KEY = "gemIncrementalInventory";
-const COOLDOWN_KEY = "gemIncrementalCooldownEnd";
+const INVENTORY_KEY =
+  "gemIncrementalInventory";
 
-export function saveCooldownEnd(time) {
-  localStorage.setItem(
-    COOLDOWN_KEY,
-    time.toString()
-  );
-}
+const COOLDOWN_KEY =
+  "gemIncrementalCooldownEnd";
 
-export function loadCooldownEnd() {
-  const saved = localStorage.getItem(COOLDOWN_KEY);
-
-  if (!saved) {
-    return null;
-  }
-
-  return Number(saved);
-}
-
-export function clearCooldownEnd() {
-  localStorage.removeItem(COOLDOWN_KEY);
-}
+const CRAFTING_KEY =
+  "gemIncrementalCrafting";
 
 export function saveInventory(inventory) {
   localStorage.setItem(
@@ -30,7 +15,86 @@ export function saveInventory(inventory) {
 }
 
 export function loadInventory() {
-  const saved = localStorage.getItem(INVENTORY_KEY);
+  const saved =
+    localStorage.getItem(INVENTORY_KEY);
+
+  if (!saved) {
+    return null;
+  }
+
+  try {
+    const inventory =
+      JSON.parse(saved);
+
+    // Migrate old inventory format:
+    // { capacity, items }
+    // ->
+    // { capacity, gems, equipment }
+
+    if (
+      Array.isArray(inventory.items) &&
+      !Array.isArray(inventory.gems)
+    ) {
+      inventory.gems =
+        inventory.items;
+
+      inventory.equipment = [];
+
+      delete inventory.items;
+
+      saveInventory(inventory);
+    }
+
+    if (!Array.isArray(inventory.gems)) {
+      inventory.gems = [];
+    }
+
+    if (!Array.isArray(inventory.equipment)) {
+      inventory.equipment = [];
+    }
+
+    return inventory;
+  } catch {
+    return null;
+  }
+}
+
+export function saveCooldownEnd(time) {
+  localStorage.setItem(
+    COOLDOWN_KEY,
+    time.toString()
+  );
+}
+
+export function loadCooldownEnd() {
+  const saved =
+    localStorage.getItem(COOLDOWN_KEY);
+
+  if (!saved) {
+    return null;
+  }
+
+  return Number(saved);
+}
+
+export function clearCooldownEnd() {
+  localStorage.removeItem(
+    COOLDOWN_KEY
+  );
+}
+
+export function saveCraftingState(
+  craftingState
+) {
+  localStorage.setItem(
+    CRAFTING_KEY,
+    JSON.stringify(craftingState)
+  );
+}
+
+export function loadCraftingState() {
+  const saved =
+    localStorage.getItem(CRAFTING_KEY);
 
   if (!saved) {
     return null;

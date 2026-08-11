@@ -1,10 +1,10 @@
 import {
   createInventory,
-  addToInventory,
+  addGemToInventory,
   isInventoryFull,
-  removeFromInventory,
-  toggleLock,
-  getInventoryCount
+  removeGemFromInventory,
+  toggleGemLock,
+  getGemCount
 } from "../src/logic/inventory.js";
 
 const inventory = createInventory();
@@ -13,7 +13,7 @@ console.log("Starting inventory:");
 console.log(inventory);
 
 for (let i = 1; i <= 15; i++) {
-  const added = addToInventory(inventory, {
+  const added = addGemToInventory(inventory, {
     gem: {
       name: `Test Gem ${i}`,
       rarity: 10,
@@ -28,13 +28,13 @@ for (let i = 1; i <= 15; i++) {
 
   console.log(
     `Added item ${i}: ${added} | ` +
-    `Slots: ${getInventoryCount(inventory)}/${inventory.capacity}`
+    `Slots: ${getGemCount(inventory)}/${inventory.capacity}`
   );
 }
 
 console.log("\nInventory full:", isInventoryFull(inventory));
 
-const extraItemAdded = addToInventory(inventory, {
+const extraItemAdded = addGemToInventory(inventory, {
   gem: {
     name: "Extra Gem",
     rarity: 999,
@@ -49,18 +49,18 @@ const extraItemAdded = addToInventory(inventory, {
 
 console.log("Can add 16th item:", extraItemAdded);
 
-toggleLock(inventory, 0);
+toggleGemLock(inventory, 0);
 console.log(
   "First item locked:",
-  inventory.items[0].locked
+  inventory.gems[0].locked
 );
 
-const removed = removeFromInventory(inventory, 1);
+const removed = removeGemFromInventory(inventory, 1);
 console.log(
   "Removed:",
   removed?.gem.name
 );
 
 console.log(
-  `Final slots: ${getInventoryCount(inventory)}/${inventory.capacity}`
+  `Final slots: ${getGemCount(inventory)}/${inventory.capacity}`
 );

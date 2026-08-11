@@ -3,20 +3,21 @@ const DEFAULT_CAPACITY = 15;
 export function createInventory(capacity = DEFAULT_CAPACITY) {
   return {
     capacity,
-    items: []
+    gems: [],
+    equipment: []
   };
 }
 
 export function isInventoryFull(inventory) {
-  return inventory.items.length >= inventory.capacity;
+  return inventory.gems.length >= inventory.capacity;
 }
 
-export function addToInventory(inventory, specimen) {
+export function addGemToInventory(inventory, specimen) {
   if (isInventoryFull(inventory)) {
     return false;
   }
 
-  inventory.items.push({
+  inventory.gems.push({
     ...specimen,
     locked: false
   });
@@ -24,16 +25,19 @@ export function addToInventory(inventory, specimen) {
   return true;
 }
 
-export function removeFromInventory(inventory, index) {
-  if (index < 0 || index >= inventory.items.length) {
+export function removeGemFromInventory(inventory, index) {
+  if (
+    index < 0 ||
+    index >= inventory.gems.length
+  ) {
     return null;
   }
 
-  return inventory.items.splice(index, 1)[0];
+  return inventory.gems.splice(index, 1)[0];
 }
 
-export function toggleLock(inventory, index) {
-  const item = inventory.items[index];
+export function toggleGemLock(inventory, index) {
+  const item = inventory.gems[index];
 
   if (!item) {
     return false;
@@ -43,6 +47,17 @@ export function toggleLock(inventory, index) {
   return true;
 }
 
-export function getInventoryCount(inventory) {
-  return inventory.items.length;
+export function getGemCount(inventory) {
+  return inventory.gems.length;
+}
+
+export function addEquipment(inventory, equipment) {
+  inventory.equipment.push(equipment);
+  return true;
+}
+
+export function hasEquipment(inventory, equipmentId) {
+  return inventory.equipment.some(
+    (item) => item.id === equipmentId
+  );
 }
