@@ -1,5 +1,19 @@
 import { rollResult } from "./src/logic/rollResult.js";
 
+import {
+  createInventory,
+  addToInventory,
+  isInventoryFull
+} from "./src/logic/inventory.js";
+
+import {
+  saveInventory,
+  loadInventory,
+  saveCooldownEnd,
+  loadCooldownEnd,
+  clearCooldownEnd
+} from "./src/logic/storage.js";
+
 const rollButton = document.getElementById("rollButton");
 const result = document.getElementById("result");
 
@@ -10,20 +24,103 @@ const playerStats = {
   rollSpeed: 1
 };
 
-let canRoll = true;
+let inventory =
+  loadInventory() ?? createInventory();
+
+let cooldownTimer = null;
 
 function getCooldownMs() {
   const baseCooldownSeconds = 5;
-  return (baseCooldownSeconds / playerStats.rollSpeed) * 1000;
+
+  return (
+    baseCooldownSeconds /
+    playerStats.rollSpeed
+  ) * 1000;
+}
+
+function refreshInventory() {
+  inventory =
+    loadInventory() ?? createInventory();
+}
+
+function showReadyButton() {
+  refreshInventory();
+
+  if (isInventoryFull(inventory)) {
+    rollButton.disabled = true;
+    rollButton.textContent = "INVENTORY FULL";
+  } else {
+    rollButton.disabled = false;
+    rollButton.textContent = "ROLL";
+  }
+}
+
+function startCooldown(cooldownEnd) {
+  if (cooldownTimer) {
+    clearInterval(cooldownTimer);
+  }
+
+  rollButton.disabled = true;
+
+  function updateCooldown() {
+    const remaining =
+      cooldownEnd - Date.now();
+
+    if (remaining <= 0) {
+      clearInterval(cooldownTimer);
+      cooldownTimer = null;
+
+      clearCooldownEnd();
+      showReadyButton();
+
+      return;
+    }
+
+    rollButton.textContent =
+      `ROLL (${(remaining / 1000).toFixed(1)}s)`;
+  }
+
+  updateCooldown();
+
+  cooldownTimer =
+    setInterval(updateCooldown, 100);
+}
+
+function restoreGameState() {
+  refreshInventory();
+
+  const cooldownEnd =
+    loadCooldownEnd();
+
+  if (
+    cooldownEnd &&
+    cooldownEnd > Date.now()
+  ) {
+    startCooldown(cooldownEnd);
+  } else {
+    clearCooldownEnd();
+    showReadyButton();
+  }
 }
 
 rollButton.addEventListener("click", () => {
-  if (!canRoll) {
+  refreshInventory();
+
+  if (isInventoryFull(inventory)) {
+    showReadyButton();
     return;
   }
 
-  canRoll = false;
-  rollButton.disabled = true;
+  const cooldownEnd =
+    loadCooldownEnd();
+
+  if (
+    cooldownEnd &&
+    cooldownEnd > Date.now()
+  ) {
+    startCooldown(cooldownEnd);
+    return;
+  }
 
   const rolled = rollResult(
     playerStats.luck,
@@ -31,39 +128,52 @@ rollButton.addEventListener("click", () => {
     playerStats.weightMultiplier
   );
 
+  const added =
+    addToInventory(inventory, rolled);
+
+  if (!added) {
+    showReadyButton();
+    return;
+  }
+
+  saveInventory(inventory);
+
   result.innerHTML = `
     <h2>${rolled.gem.name}</h2>
 
-    <p>Rarity: 1 in ${rolled.gem.rarity.toLocaleString()}</p>
+    <p>
+      Rarity:
+      1 in ${rolled.gem.rarity.toLocaleString()}
+    </p>
 
     <p>
-      Weight: ${rolled.finalWeight.toFixed(2)}g
+      Weight:
+      ${rolled.finalWeight.toFixed(2)}g
       (${rolled.weightMultiplier.toFixed(3)}x)
     </p>
 
-    <p>Value: $${rolled.value.toFixed(2)}</p>
+    <p>
+      Value:
+      $${rolled.value.toFixed(2)}
+    </p>
+
+    <p>
+      Inventory:
+      ${inventory.items.length}/${inventory.capacity}
+    </p>
   `;
 
-  const cooldownMs = getCooldownMs();
+  const newCooldownEnd =
+    Date.now() + getCooldownMs();
 
-  let remaining = cooldownMs;
+  saveCooldownEnd(newCooldownEnd);
 
-  rollButton.textContent = `ROLL (${(remaining / 1000).toFixed(1)}s)`;
-
-  const timer = setInterval(() => {
-    remaining -= 100;
-
-    if (remaining <= 0) {
-      clearInterval(timer);
-
-      canRoll = true;
-      rollButton.disabled = false;
-      rollButton.textContent = "ROLL";
-
-      return;
-    }
-
-    rollButton.textContent =
-      `ROLL (${(remaining / 1000).toFixed(1)}s)`;
-  }, 100);
+  startCooldown(newCooldownEnd);
 });
+
+window.addEventListener(
+  "pageshow",
+  restoreGameState
+);
+
+restoreGameState();
