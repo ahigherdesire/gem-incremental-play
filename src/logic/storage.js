@@ -53,6 +53,30 @@ export function loadInventory() {
       inventory.equipment = [];
     }
 
+    // Temporary v0.1 equipment migration:
+    // automatically equip the only item in a category
+    for (const equipment of inventory.equipment) {
+      const sameCategory =
+        inventory.equipment.filter(
+          (item) =>
+            item.category === equipment.category
+        );
+    
+      const categoryHasEquipped =
+        sameCategory.some(
+          (item) => item.equipped
+        );
+    
+      if (
+        sameCategory.length === 1 &&
+        !categoryHasEquipped
+      ) {
+        equipment.equipped = true;
+      }
+    }
+    
+    saveInventory(inventory);
+
     return inventory;
   } catch {
     return null;
