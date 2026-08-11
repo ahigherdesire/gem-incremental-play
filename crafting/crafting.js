@@ -91,7 +91,7 @@ function craftRecipe(recipe) {
     inventory,
     {
       ...recipe.reward,
-      equipped: false
+      equipped: true
     }
   );
 
