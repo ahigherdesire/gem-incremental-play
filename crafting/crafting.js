@@ -88,6 +88,27 @@ function craftRecipe(recipe) {
   player.money -=
     recipe.moneyCost;
 
+  for (const requirement of recipe.requirements) {
+    if (
+      requirement.type ===
+      "equipment"
+    ) {
+      const index =
+        inventory.equipment.findIndex(
+          (equipment) =>
+            equipment.id ===
+            requirement.equipmentId
+        );
+  
+      if (index !== -1) {
+        inventory.equipment.splice(
+          index,
+          1
+        );
+      }
+    }
+  }
+
   addEquipment(
     inventory,
     {
