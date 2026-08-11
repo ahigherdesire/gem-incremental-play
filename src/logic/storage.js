@@ -7,6 +7,13 @@ const COOLDOWN_KEY =
 const CRAFTING_KEY =
   "gemIncrementalCrafting";
 
+export function saveInventory(inventory) {
+  localStorage.setItem(
+    INVENTORY_KEY,
+    JSON.stringify(inventory)
+  );
+}
+
 export function loadInventory() {
   const saved =
     localStorage.getItem(INVENTORY_KEY);
@@ -21,7 +28,7 @@ export function loadInventory() {
 
     // Migrate old inventory format:
     // { capacity, items }
-    // into:
+    // ->
     // { capacity, gems, equipment }
 
     if (
@@ -38,13 +45,12 @@ export function loadInventory() {
       saveInventory(inventory);
     }
 
-    // Safety for newer saves missing equipment
-    if (!Array.isArray(inventory.equipment)) {
-      inventory.equipment = [];
-    }
-
     if (!Array.isArray(inventory.gems)) {
       inventory.gems = [];
+    }
+
+    if (!Array.isArray(inventory.equipment)) {
+      inventory.equipment = [];
     }
 
     return inventory;
