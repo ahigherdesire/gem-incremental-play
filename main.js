@@ -14,6 +14,10 @@ import {
 } from "./src/logic/crafting.js";
 
 import {
+  getPlayerStats
+} from "./src/logic/playerStats.js";
+
+import {
   saveInventory,
   loadInventory,
   saveCooldownEnd,
@@ -22,10 +26,6 @@ import {
   saveCraftingState,
   loadCraftingState
 } from "./src/logic/storage.js";
-
-import {
-  getPlayerStats
-} from "./src/logic/playerStats.js";
 
 const rollButton =
   document.getElementById("rollButton");
@@ -52,12 +52,6 @@ function getCooldownMs() {
   return (
     baseCooldownSeconds /
     stats.rollSpeed
-  ) * 1000;
-}
-
-  return (
-    baseCooldownSeconds /
-    playerStats.rollSpeed
   ) * 1000;
 }
 
@@ -117,7 +111,10 @@ function startCooldown(cooldownEnd) {
   updateCooldown();
 
   cooldownTimer =
-    setInterval(updateCooldown, 100);
+    setInterval(
+      updateCooldown,
+      100
+    );
 }
 
 function restoreGameState() {
