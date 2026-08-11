@@ -48,3 +48,8 @@ body {
 .gem-card.undiscovered {
   opacity: 0.55;
 }
+
+.gem-description {
+  line-height: 1.5;
+  opacity: 0.85;
+}
