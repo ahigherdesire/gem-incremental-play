@@ -548,12 +548,17 @@ function renderRecipes() {
                   return;
                 }
 
+                const requirementIndex =
+                  Number(
+                    button.dataset.requirementIndex
+                  );
+                
                 const deposited =
-                  manuallyDepositGem(
+                  manuallyDepositRequirement(
                     craftingState,
                     selectedRecipe,
                     inventory,
-                    gemName
+                    requirementIndex
                   );
 
                 if (!deposited) {
