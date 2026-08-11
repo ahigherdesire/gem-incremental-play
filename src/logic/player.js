@@ -58,3 +58,27 @@ export function loadPlayer() {
     return null;
   }
 }
+
+export function recordRoll(player, rolledGem) {
+  if (!player.stats) {
+    player.stats = {
+      totalRolls: 0,
+      rarestGem: null
+    };
+  }
+
+  player.stats.totalRolls += 1;
+
+  if (
+    !player.stats.rarestGem ||
+    rolledGem.rarity >
+      player.stats.rarestGem.rarity
+  ) {
+    player.stats.rarestGem = {
+      name: rolledGem.name,
+      rarity: rolledGem.rarity
+    };
+  }
+
+  savePlayer(player);
+}
