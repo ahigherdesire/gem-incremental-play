@@ -278,6 +278,14 @@ function renderRecipes() {
         ${recipe.name}
       </h2>
 
+      <p>
+        Bonus:
+        +${(
+          (recipe.reward?.bonus?.luck ?? 0) *
+          100
+        ).toFixed(0)}% Luck
+      </p>
+
       ${
         owned
           ? `
