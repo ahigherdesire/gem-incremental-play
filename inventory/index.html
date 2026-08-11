@@ -10,13 +10,48 @@
 <body>
   <main class="inventory-page">
     <h1>Inventory</h1>
-
+  
     <p id="inventoryCount">0 / 15</p>
-    <p id="money">Money: $0.00</p>
-
+  
+    <p id="money">$0.00</p>
+  
     <a href="/">← Back to Rolling</a>
-
-    <div id="inventoryList" class="inventory-list"></div>
+  
+    <div class="inventory-tabs">
+      <button
+        id="gemsTab"
+        class="tab-button active"
+      >
+        Gems
+      </button>
+  
+      <button
+        id="equipmentTab"
+        class="tab-button"
+      >
+        Equipment
+      </button>
+    </div>
+  
+    <section
+      id="gemsSection"
+      class="inventory-section"
+    >
+      <div
+        id="inventoryList"
+        class="inventory-list"
+      ></div>
+    </section>
+  
+    <section
+      id="equipmentSection"
+      class="inventory-section hidden"
+    >
+      <div
+        id="equipmentList"
+        class="equipment-list"
+      ></div>
+    </section>
   </main>
 
   <script type="module" src="./inventory.js"></script>

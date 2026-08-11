@@ -14,6 +14,10 @@ import {
 } from "./src/logic/crafting.js";
 
 import {
+  getPlayerStats
+} from "./src/logic/playerStats.js";
+
+import {
   saveInventory,
   loadInventory,
   saveCooldownEnd,
@@ -29,13 +33,6 @@ const rollButton =
 const result =
   document.getElementById("result");
 
-const playerStats = {
-  luck: 1,
-  weightLuck: 1,
-  weightMultiplier: 1,
-  rollSpeed: 1
-};
-
 let inventory =
   loadInventory() ??
   createInventory();
@@ -47,11 +44,14 @@ let craftingState =
 let cooldownTimer = null;
 
 function getCooldownMs() {
-  const baseCooldownSeconds = 5;
+  const stats =
+    getPlayerStats(inventory);
+
+  const baseCooldownSeconds = 3;
 
   return (
     baseCooldownSeconds /
-    playerStats.rollSpeed
+    stats.rollSpeed
   ) * 1000;
 }
 
@@ -111,7 +111,10 @@ function startCooldown(cooldownEnd) {
   updateCooldown();
 
   cooldownTimer =
-    setInterval(updateCooldown, 100);
+    setInterval(
+      updateCooldown,
+      100
+    );
 }
 
 function restoreGameState() {
@@ -154,11 +157,14 @@ rollButton.addEventListener(
       return;
     }
 
+    const stats =
+      getPlayerStats(inventory);
+
     const rolled =
       rollResult(
-        playerStats.luck,
-        playerStats.weightLuck,
-        playerStats.weightMultiplier
+        stats.luck,
+        stats.weightLuck,
+        stats.weightMultiplier
       );
 
     let autoDeposited = false;

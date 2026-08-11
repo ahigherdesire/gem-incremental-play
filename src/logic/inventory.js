@@ -61,3 +61,15 @@ export function hasEquipment(inventory, equipmentId) {
     (item) => item.id === equipmentId
   );
 }
+
+export function hasEquipmentTierOrHigher(
+  inventory,
+  category,
+  tier
+) {
+  return inventory.equipment.some(
+    (equipment) =>
+      equipment.category === category &&
+      (equipment.tier ?? 0) >= tier
+  );
+}

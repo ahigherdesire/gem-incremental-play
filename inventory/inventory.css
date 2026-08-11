@@ -35,3 +35,39 @@ body {
   padding: 8px 12px;
   cursor: pointer;
 }
+
+.inventory-tabs {
+  display: flex;
+  gap: 10px;
+  margin-top: 30px;
+  margin-bottom: 25px;
+}
+
+.tab-button {
+  padding: 10px 20px;
+  cursor: pointer;
+}
+
+.tab-button.active {
+  font-weight: bold;
+}
+
+.hidden {
+  display: none;
+}
+
+.equipment-list {
+  display: grid;
+  grid-template-columns:
+    repeat(
+      auto-fit,
+      minmax(240px, 1fr)
+    );
+  gap: 16px;
+}
+
+.equipment-item {
+  border: 1px solid #444;
+  border-radius: 12px;
+  padding: 18px;
+}

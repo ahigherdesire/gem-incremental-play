@@ -10,7 +10,8 @@ import {
 
 import {
   addEquipment,
-  hasEquipment
+  hasEquipment,
+  hasEquipmentTierOrHigher
 } from "../src/logic/inventory.js";
 
 import {
@@ -66,9 +67,10 @@ function setAutoCraft(recipeId) {
 
 function craftRecipe(recipe) {
   if (
-    hasEquipment(
+    hasEquipmentTierOrHigher(
       inventory,
-      recipe.reward.id
+      recipe.reward.category,
+      recipe.reward.tier
     )
   ) {
     return;
@@ -78,7 +80,8 @@ function craftRecipe(recipe) {
     !isRecipeReady(
       craftingState,
       recipe,
-      player
+      player,
+      inventory
     )
   ) {
     return;
@@ -87,11 +90,34 @@ function craftRecipe(recipe) {
   player.money -=
     recipe.moneyCost;
 
+  // Consume previous equipment if the recipe requires it
+  for (const requirement of recipe.requirements) {
+    if (
+      requirement.type ===
+      "equipment"
+    ) {
+      const index =
+        inventory.equipment.findIndex(
+          (equipment) =>
+            equipment.id ===
+            requirement.equipmentId
+        );
+
+      if (index !== -1) {
+        inventory.equipment.splice(
+          index,
+          1
+        );
+      }
+    }
+  }
+
+  // Add and auto-equip the newly crafted equipment
   addEquipment(
     inventory,
     {
       ...recipe.reward,
-      equipped: false
+      equipped: true
     }
   );
 
@@ -123,9 +149,10 @@ function renderRecipes() {
       );
 
     const owned =
-      hasEquipment(
+      hasEquipmentTierOrHigher(
         inventory,
-        recipe.reward.id
+        recipe.reward.category,
+        recipe.reward.tier
       );
 
     const requirementsHtml =
@@ -154,7 +181,6 @@ function renderRecipes() {
               <span>
                 ${current} /
                 ${requirement.amount}
-
                 ${complete ? "✓" : ""}
 
                 ${
@@ -177,6 +203,54 @@ function renderRecipes() {
         })
         .join("");
 
+    const equipmentRequirementsHtml =
+      recipe.requirements
+        .filter(
+          (requirement) =>
+            requirement.type ===
+            "equipment"
+        )
+        .map((requirement) => {
+          const requiredEquipment =
+            inventory.equipment.find(
+              (equipment) =>
+                equipment.id ===
+                requirement.equipmentId
+            );
+
+          const requirementMet =
+            Boolean(requiredEquipment);
+
+          const requiredRecipe =
+            recipes.find(
+              (otherRecipe) =>
+                otherRecipe.reward?.id ===
+                requirement.equipmentId
+            );
+
+          const requiredName =
+            requiredRecipe?.reward?.name ??
+            requirement.equipmentId;
+
+          return `
+            <div class="requirement">
+              <span>
+                Required:
+                ${requiredName}
+              </span>
+
+              <span>
+                ${
+                  requirementMet
+                    ? "✓"
+                    : "✗"
+                }
+              </span>
+            </div>
+          `;
+        })
+        .join("");
+
     const moneyComplete =
       player.money >=
       recipe.moneyCost;
@@ -190,7 +264,8 @@ function renderRecipes() {
       isRecipeReady(
         craftingState,
         recipe,
-        player
+        player,
+        inventory
       );
 
     const card =
@@ -205,6 +280,14 @@ function renderRecipes() {
       <h2>
         ${recipe.name}
       </h2>
+
+      <p>
+        Bonus:
+        +${(
+          (recipe.reward?.bonus?.luck ?? 0) *
+          100
+        ).toFixed(0)}% Luck
+      </p>
 
       ${
         owned
@@ -225,6 +308,7 @@ function renderRecipes() {
           `
           : `
             <div class="requirements">
+              ${equipmentRequirementsHtml}
               ${requirementsHtml}
 
               <div class="requirement">
@@ -311,9 +395,7 @@ function renderRecipes() {
                       recipeId
                   );
 
-                if (
-                  !selectedRecipe
-                ) {
+                if (!selectedRecipe) {
                   return;
                 }
 
@@ -325,9 +407,7 @@ function renderRecipes() {
                     gemName
                   );
 
-                if (
-                  !deposited
-                ) {
+                if (!deposited) {
                   return;
                 }
 
