@@ -2,10 +2,13 @@ import recipes from "../src/data/recipes.js";
 
 import {
   createCraftingState,
-  ensureRecipeProgress
+  ensureRecipeProgress,
+  manuallyDepositGem
 } from "../src/logic/crafting.js";
 
 import {
+  loadInventory,
+  saveInventory,
   loadCraftingState,
   saveCraftingState
 } from "../src/logic/storage.js";
@@ -28,6 +31,12 @@ let craftingState =
 let player =
   loadPlayer() ??
   createPlayer();
+
+let inventory =
+  loadInventory() ?? {
+    capacity: 15,
+    items: []
+  };
 
 function setAutoCraft(recipeId) {
   if (
@@ -87,6 +96,20 @@ function renderRecipes() {
               <span>
                 ${current} / ${requirement.amount}
                 ${complete ? "✓" : ""}
+
+                ${
+                  !complete
+                    ? `
+                      <button
+                        class="deposit-button"
+                        data-recipe="${recipe.id}"
+                        data-gem="${requirement.gem}"
+                      >
+                        Deposit
+                      </button>
+                    `
+                    : ""
+                }
               </span>
             </div>
           `;
@@ -142,6 +165,54 @@ function renderRecipes() {
         }
       );
 
+    card
+      .querySelectorAll(
+        ".deposit-button"
+      )
+      .forEach((button) => {
+        button.addEventListener(
+          "click",
+          () => {
+            const recipeId =
+              button.dataset.recipe;
+
+            const gemName =
+              button.dataset.gem;
+
+            const selectedRecipe =
+              recipes.find(
+                (recipe) =>
+                  recipe.id ===
+                  recipeId
+              );
+
+            if (!selectedRecipe) {
+              return;
+            }
+
+            const deposited =
+              manuallyDepositGem(
+                craftingState,
+                selectedRecipe,
+                inventory,
+                gemName
+              );
+
+            if (!deposited) {
+              return;
+            }
+
+            saveInventory(inventory);
+
+            saveCraftingState(
+              craftingState
+            );
+
+            renderRecipes();
+          }
+        );
+      });
+
     recipeList.appendChild(card);
   }
 
@@ -156,6 +227,12 @@ function refreshCraftingPage() {
   player =
     loadPlayer() ??
     createPlayer();
+
+  inventory =
+    loadInventory() ?? {
+      capacity: 15,
+      items: []
+    };
 
   renderRecipes();
 }
