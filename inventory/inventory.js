@@ -14,6 +14,11 @@ import {
   savePlayer
 } from "../src/logic/player.js";
 
+
+// =========================================================
+// DOM ELEMENTS
+// =========================================================
+
 const inventoryCount =
   document.getElementById("inventoryCount");
 
@@ -38,36 +43,168 @@ const gemsSection =
 const equipmentSection =
   document.getElementById("equipmentSection");
 
-let inventory = loadInventory();
+const capacityStatus =
+  document.getElementById("capacityStatus");
+
+const capacityUpgradeInfo =
+  document.getElementById(
+    "capacityUpgradeInfo"
+  );
+
+const capacityUpgradeButton =
+  document.getElementById(
+    "capacityUpgradeButton"
+  );
+
+
+// =========================================================
+// SAVED STATE
+// =========================================================
+
+let inventory =
+  loadInventory() ?? {
+    capacity: 15,
+    gems: [],
+    equipment: []
+  };
 
 let player =
-  loadPlayer() ?? createPlayer();
+  loadPlayer() ??
+  createPlayer();
+
+
+// =========================================================
+// CAPACITY UPGRADES
+// =========================================================
+
+const capacityUpgrades = [
+  {
+    capacity: 20,
+    cost: 1000
+  },
+
+  {
+    capacity: 25,
+    cost: 3000
+  },
+
+  {
+    capacity: 30,
+    cost: 8000
+  },
+
+  {
+    capacity: 40,
+    cost: 20000
+  },
+
+  {
+    capacity: 50,
+    cost: 50000
+  }
+];
+
+
+function getNextCapacityUpgrade() {
+  return capacityUpgrades.find(
+    (upgrade) =>
+      upgrade.capacity >
+      inventory.capacity
+  );
+}
+
+
+function renderCapacityUpgrade() {
+  capacityStatus.textContent =
+    `${inventory.capacity} slots`;
+
+  const nextUpgrade =
+    getNextCapacityUpgrade();
+
+  if (!nextUpgrade) {
+    capacityUpgradeInfo.textContent =
+      "Maximum capacity reached.";
+
+    capacityUpgradeButton.disabled =
+      true;
+
+    capacityUpgradeButton.textContent =
+      "MAXED";
+
+    return;
+  }
+
+  capacityUpgradeInfo.textContent =
+    `Next upgrade: ` +
+    `${nextUpgrade.capacity} slots — ` +
+    `$${nextUpgrade.cost.toLocaleString()}`;
+
+  capacityUpgradeButton.disabled =
+    player.money <
+    nextUpgrade.cost;
+
+  capacityUpgradeButton.textContent =
+    "Upgrade Capacity";
+}
+
+
+// =========================================================
+// INVENTORY TABS
+// =========================================================
 
 function showGemsTab() {
-  gemsTab.classList.add("active");
-  equipmentTab.classList.remove("active");
+  gemsTab.classList.add(
+    "active"
+  );
 
-  gemsSection.classList.remove("hidden");
-  equipmentSection.classList.add("hidden");
+  equipmentTab.classList.remove(
+    "active"
+  );
+
+  gemsSection.classList.remove(
+    "hidden"
+  );
+
+  equipmentSection.classList.add(
+    "hidden"
+  );
 }
+
 
 function showEquipmentTab() {
-  equipmentTab.classList.add("active");
-  gemsTab.classList.remove("active");
+  equipmentTab.classList.add(
+    "active"
+  );
 
-  equipmentSection.classList.remove("hidden");
-  gemsSection.classList.add("hidden");
+  gemsTab.classList.remove(
+    "active"
+  );
+
+  equipmentSection.classList.remove(
+    "hidden"
+  );
+
+  gemsSection.classList.add(
+    "hidden"
+  );
 }
+
 
 gemsTab.addEventListener(
   "click",
   showGemsTab
 );
 
+
 equipmentTab.addEventListener(
   "click",
   showEquipmentTab
 );
+
+
+// =========================================================
+// RENDER GEM INVENTORY
+// =========================================================
 
 function renderGems() {
   inventoryList.innerHTML = "";
@@ -75,7 +212,9 @@ function renderGems() {
   inventoryCount.textContent =
     `${inventory.gems.length} / ${inventory.capacity}`;
 
-  if (inventory.gems.length === 0) {
+  if (
+    inventory.gems.length === 0
+  ) {
     inventoryList.innerHTML =
       "<p>Your gem inventory is empty.</p>";
 
@@ -85,17 +224,22 @@ function renderGems() {
   inventory.gems.forEach(
     (item, index) => {
       const card =
-        document.createElement("div");
+        document.createElement(
+          "div"
+        );
 
       card.className =
         "inventory-item";
 
       card.innerHTML = `
-        <h2>${item.gem.name}</h2>
+        <h2>
+          ${item.gem.name}
+        </h2>
 
         <p>
           Rarity:
-          1 in ${item.gem.rarity.toLocaleString()}
+          1 in
+          ${item.gem.rarity.toLocaleString()}
         </p>
 
         <p>
@@ -108,7 +252,9 @@ function renderGems() {
           $${item.value.toFixed(2)}
         </p>
 
-        <button class="lock-button">
+        <button
+          class="lock-button"
+        >
           ${
             item.locked
               ? "🔒 Locked"
@@ -116,10 +262,17 @@ function renderGems() {
           }
         </button>
 
-        <button class="sell-button">
+        <button
+          class="sell-button"
+        >
           Sell
         </button>
       `;
+
+
+      // -------------------------
+      // LOCK / UNLOCK
+      // -------------------------
 
       card
         .querySelector(
@@ -140,6 +293,11 @@ function renderGems() {
             renderInventory();
           }
         );
+
+
+      // -------------------------
+      // SELL GEM
+      // -------------------------
 
       card
         .querySelector(
@@ -164,11 +322,14 @@ function renderGems() {
               inventory
             );
 
-            savePlayer(player);
+            savePlayer(
+              player
+            );
 
             renderInventory();
           }
         );
+
 
       inventoryList.appendChild(
         card
@@ -176,6 +337,11 @@ function renderGems() {
     }
   );
 }
+
+
+// =========================================================
+// RENDER EQUIPMENT
+// =========================================================
 
 function renderEquipment() {
   equipmentList.innerHTML = "";
@@ -192,12 +358,15 @@ function renderEquipment() {
   inventory.equipment.forEach(
     (equipment) => {
       const card =
-        document.createElement("div");
+        document.createElement(
+          "div"
+        );
 
       card.className =
         "equipment-item";
 
       const bonuses = [];
+
 
       if (
         equipment.bonus?.luck
@@ -210,6 +379,7 @@ function renderEquipment() {
         );
       }
 
+
       if (
         equipment.bonus?.rollSpeed
       ) {
@@ -220,6 +390,7 @@ function renderEquipment() {
           ).toFixed(0)}% Roll Speed`
         );
       }
+
 
       if (
         equipment.bonus?.weightLuck
@@ -232,17 +403,20 @@ function renderEquipment() {
         );
       }
 
+
       if (
-        equipment.bonus?.weightMultiplier
+        equipment.bonus
+          ?.weightMultiplier
       ) {
         bonuses.push(
           `+${(
             equipment.bonus
               .weightMultiplier *
             100
-          ).toFixed(0)}% Weight`
+          ).toFixed(0)}% Weight Multiplier`
         );
       }
+
 
       card.innerHTML = `
         <h2>
@@ -252,6 +426,11 @@ function renderEquipment() {
         <p>
           Type:
           ${equipment.category}
+        </p>
+
+        <p>
+          Tier:
+          ${equipment.tier ?? "?"}
         </p>
 
         <p>
@@ -273,6 +452,7 @@ function renderEquipment() {
         </p>
       `;
 
+
       equipmentList.appendChild(
         card
       );
@@ -280,33 +460,74 @@ function renderEquipment() {
   );
 }
 
+
+// =========================================================
+// RENDER FULL INVENTORY PAGE
+// =========================================================
+
 function renderInventory() {
-  if (!inventory) {
-    inventoryCount.textContent =
-      "0 / 15";
-
-    moneyDisplay.textContent =
-      `$${player.money.toFixed(2)}`;
-
-    inventoryList.innerHTML =
-      "<p>Your gem inventory is empty.</p>";
-
-    equipmentList.innerHTML =
-      "<p>You do not own any equipment yet.</p>";
-
-    return;
-  }
-
   moneyDisplay.textContent =
     `$${player.money.toFixed(2)}`;
 
+  renderCapacityUpgrade();
+
   renderGems();
+
   renderEquipment();
 }
 
+
+// =========================================================
+// BUY CAPACITY UPGRADE
+// =========================================================
+
+capacityUpgradeButton.addEventListener(
+  "click",
+  () => {
+    const nextUpgrade =
+      getNextCapacityUpgrade();
+
+    if (!nextUpgrade) {
+      return;
+    }
+
+    if (
+      player.money <
+      nextUpgrade.cost
+    ) {
+      return;
+    }
+
+    player.money -=
+      nextUpgrade.cost;
+
+    inventory.capacity =
+      nextUpgrade.capacity;
+
+    savePlayer(
+      player
+    );
+
+    saveInventory(
+      inventory
+    );
+
+    renderInventory();
+  }
+);
+
+
+// =========================================================
+// REFRESH SAVED STATE
+// =========================================================
+
 function refreshInventoryPage() {
   inventory =
-    loadInventory();
+    loadInventory() ?? {
+      capacity: 15,
+      gems: [],
+      equipment: []
+    };
 
   player =
     loadPlayer() ??
@@ -315,9 +536,15 @@ function refreshInventoryPage() {
   renderInventory();
 }
 
+
 window.addEventListener(
   "pageshow",
   refreshInventoryPage
 );
+
+
+// =========================================================
+// INITIAL RENDER
+// =========================================================
 
 refreshInventoryPage();
