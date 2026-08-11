@@ -48,6 +48,38 @@ let inventory =
     equipment: []
   };
 
+function formatBonuses(bonus = {}) {
+  const bonuses = [];
+
+  if (bonus.luck) {
+    bonuses.push(
+      `+${(bonus.luck * 100).toFixed(0)}% Luck`
+    );
+  }
+
+  if (bonus.rollSpeed) {
+    bonuses.push(
+      `+${(bonus.rollSpeed * 100).toFixed(0)}% Roll Speed`
+    );
+  }
+
+  if (bonus.weightLuck) {
+    bonuses.push(
+      `+${(bonus.weightLuck * 100).toFixed(0)}% Weight Luck`
+    );
+  }
+
+  if (bonus.weightMultiplier) {
+    bonuses.push(
+      `+${(bonus.weightMultiplier * 100).toFixed(0)}% Weight Multiplier`
+    );
+  }
+
+  return bonuses.length > 0
+    ? bonuses.join(", ")
+    : "None";
+}
+
 function setAutoCraft(recipeId) {
   if (
     craftingState.activeAutoCraftRecipeId ===
@@ -283,10 +315,7 @@ function renderRecipes() {
 
       <p>
         Bonus:
-        +${(
-          (recipe.reward?.bonus?.luck ?? 0) *
-          100
-        ).toFixed(0)}% Luck
+        ${formatBonuses(recipe.reward?.bonus)}
       </p>
 
       ${
@@ -298,12 +327,7 @@ function renderRecipes() {
 
             <p>
               Bonus:
-              +${(
-                recipe.reward
-                  .bonus.luck *
-                100
-              ).toFixed(0)}%
-              Luck
+              ${formatBonuses(recipe.reward?.bonus)}
             </p>
           `
           : `
