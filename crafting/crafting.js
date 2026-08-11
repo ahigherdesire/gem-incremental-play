@@ -10,7 +10,8 @@ import {
 
 import {
   addEquipment,
-  hasEquipment
+  hasEquipment,
+  hasEquipmentTierOrHigher
 } from "../src/logic/inventory.js";
 
 import {
