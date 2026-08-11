@@ -3,8 +3,15 @@ import recipes from "../src/data/recipes.js";
 import {
   createCraftingState,
   ensureRecipeProgress,
-  manuallyDepositGem
+  manuallyDepositGem,
+  isRecipeReady,
+  resetRecipeProgress
 } from "../src/logic/crafting.js";
+
+import {
+  addEquipment,
+  hasEquipment
+} from "../src/logic/inventory.js";
 
 import {
   loadInventory,
@@ -15,7 +22,8 @@ import {
 
 import {
   createPlayer,
-  loadPlayer
+  loadPlayer,
+  savePlayer
 } from "../src/logic/player.js";
 
 const recipeList =
@@ -35,7 +43,8 @@ let player =
 let inventory =
   loadInventory() ?? {
     capacity: 15,
-    items: []
+    gems: [],
+    equipment: []
   };
 
 function setAutoCraft(recipeId) {
@@ -55,6 +64,51 @@ function setAutoCraft(recipeId) {
   renderRecipes();
 }
 
+function craftRecipe(recipe) {
+  if (
+    hasEquipment(
+      inventory,
+      recipe.reward.id
+    )
+  ) {
+    return;
+  }
+
+  if (
+    !isRecipeReady(
+      craftingState,
+      recipe,
+      player
+    )
+  ) {
+    return;
+  }
+
+  player.money -=
+    recipe.moneyCost;
+
+  addEquipment(
+    inventory,
+    {
+      ...recipe.reward,
+      equipped: false
+    }
+  );
+
+  resetRecipeProgress(
+    craftingState,
+    recipe.id
+  );
+
+  savePlayer(player);
+  saveInventory(inventory);
+  saveCraftingState(
+    craftingState
+  );
+
+  renderRecipes();
+}
+
 function renderRecipes() {
   recipeList.innerHTML = "";
 
@@ -68,10 +122,11 @@ function renderRecipes() {
         recipe
       );
 
-    const card =
-      document.createElement("div");
-
-    card.className = "recipe-card";
+    const owned =
+      hasEquipment(
+        inventory,
+        recipe.reward.id
+      );
 
     const requirementsHtml =
       recipe.requirements
@@ -82,10 +137,13 @@ function renderRecipes() {
         )
         .map((requirement) => {
           const current =
-            progress[requirement.gem] ?? 0;
+            progress[
+              requirement.gem
+            ] ?? 0;
 
           const complete =
-            current >= requirement.amount;
+            current >=
+            requirement.amount;
 
           return `
             <div class="requirement">
@@ -94,11 +152,14 @@ function renderRecipes() {
               </span>
 
               <span>
-                ${current} / ${requirement.amount}
+                ${current} /
+                ${requirement.amount}
+
                 ${complete ? "✓" : ""}
 
                 ${
-                  !complete
+                  !complete &&
+                  !owned
                     ? `
                       <button
                         class="deposit-button"
@@ -117,106 +178,182 @@ function renderRecipes() {
         .join("");
 
     const moneyComplete =
-      player.money >= recipe.moneyCost;
+      player.money >=
+      recipe.moneyCost;
 
     const autoCraftEnabled =
-      craftingState.activeAutoCraftRecipeId ===
+      craftingState
+        .activeAutoCraftRecipeId ===
       recipe.id;
 
-    card.innerHTML = `
-      <h2>${recipe.name}</h2>
-
-      <div class="requirements">
-        ${requirementsHtml}
-
-        <div class="requirement">
-          <span>Money</span>
-
-          <span>
-            $${player.money.toFixed(2)}
-            /
-            $${recipe.moneyCost.toFixed(2)}
-            ${moneyComplete ? "✓" : ""}
-          </span>
-        </div>
-      </div>
-
-      <button class="auto-craft-button">
-        Auto Craft:
-        ${autoCraftEnabled ? "ON" : "OFF"}
-      </button>
-
-      <button
-        class="craft-button"
-        disabled
-      >
-        Craft
-      </button>
-    `;
-
-    card
-      .querySelector(
-        ".auto-craft-button"
-      )
-      .addEventListener(
-        "click",
-        () => {
-          setAutoCraft(recipe.id);
-        }
+    const ready =
+      isRecipeReady(
+        craftingState,
+        recipe,
+        player
       );
 
-    card
-      .querySelectorAll(
-        ".deposit-button"
-      )
-      .forEach((button) => {
-        button.addEventListener(
+    const card =
+      document.createElement(
+        "div"
+      );
+
+    card.className =
+      "recipe-card";
+
+    card.innerHTML = `
+      <h2>
+        ${recipe.name}
+      </h2>
+
+      ${
+        owned
+          ? `
+            <p>
+              ✓ Owned
+            </p>
+
+            <p>
+              Bonus:
+              +${(
+                recipe.reward
+                  .bonus.luck *
+                100
+              ).toFixed(0)}%
+              Luck
+            </p>
+          `
+          : `
+            <div class="requirements">
+              ${requirementsHtml}
+
+              <div class="requirement">
+                <span>
+                  Money
+                </span>
+
+                <span>
+                  $${player.money.toFixed(2)}
+                  /
+                  $${recipe.moneyCost.toFixed(2)}
+                  ${moneyComplete ? "✓" : ""}
+                </span>
+              </div>
+            </div>
+
+            <button
+              class="auto-craft-button"
+            >
+              Auto Craft:
+              ${
+                autoCraftEnabled
+                  ? "ON"
+                  : "OFF"
+              }
+            </button>
+
+            <button
+              class="craft-button"
+              ${ready ? "" : "disabled"}
+            >
+              Craft
+            </button>
+          `
+      }
+    `;
+
+    if (!owned) {
+      card
+        .querySelector(
+          ".auto-craft-button"
+        )
+        .addEventListener(
           "click",
           () => {
-            const recipeId =
-              button.dataset.recipe;
-
-            const gemName =
-              button.dataset.gem;
-
-            const selectedRecipe =
-              recipes.find(
-                (recipe) =>
-                  recipe.id ===
-                  recipeId
-              );
-
-            if (!selectedRecipe) {
-              return;
-            }
-
-            const deposited =
-              manuallyDepositGem(
-                craftingState,
-                selectedRecipe,
-                inventory,
-                gemName
-              );
-
-            if (!deposited) {
-              return;
-            }
-
-            saveInventory(inventory);
-
-            saveCraftingState(
-              craftingState
+            setAutoCraft(
+              recipe.id
             );
-
-            renderRecipes();
           }
         );
-      });
 
-    recipeList.appendChild(card);
+      card
+        .querySelector(
+          ".craft-button"
+        )
+        .addEventListener(
+          "click",
+          () => {
+            craftRecipe(recipe);
+          }
+        );
+
+      card
+        .querySelectorAll(
+          ".deposit-button"
+        )
+        .forEach(
+          (button) => {
+            button.addEventListener(
+              "click",
+              () => {
+                const recipeId =
+                  button.dataset
+                    .recipe;
+
+                const gemName =
+                  button.dataset
+                    .gem;
+
+                const selectedRecipe =
+                  recipes.find(
+                    (recipe) =>
+                      recipe.id ===
+                      recipeId
+                  );
+
+                if (
+                  !selectedRecipe
+                ) {
+                  return;
+                }
+
+                const deposited =
+                  manuallyDepositGem(
+                    craftingState,
+                    selectedRecipe,
+                    inventory,
+                    gemName
+                  );
+
+                if (
+                  !deposited
+                ) {
+                  return;
+                }
+
+                saveInventory(
+                  inventory
+                );
+
+                saveCraftingState(
+                  craftingState
+                );
+
+                renderRecipes();
+              }
+            );
+          }
+        );
+    }
+
+    recipeList.appendChild(
+      card
+    );
   }
 
-  saveCraftingState(craftingState);
+  saveCraftingState(
+    craftingState
+  );
 }
 
 function refreshCraftingPage() {
@@ -231,7 +368,8 @@ function refreshCraftingPage() {
   inventory =
     loadInventory() ?? {
       capacity: 15,
-      items: []
+      gems: [],
+      equipment: []
     };
 
   renderRecipes();
