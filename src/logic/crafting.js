@@ -121,7 +121,8 @@ export function manuallyDepositGem(
 export function isRecipeReady(
   craftingState,
   recipe,
-  player
+  player,
+  inventory
 ) {
   const progress =
     ensureRecipeProgress(
@@ -129,22 +130,33 @@ export function isRecipeReady(
       recipe
     );
 
-  const gemsComplete =
+  const requirementsComplete =
     recipe.requirements.every(
       (requirement) => {
         if (
-          requirement.type !==
+          requirement.type ===
           "gem-count"
         ) {
-          return true;
+          const current =
+            progress[requirement.gem] ?? 0;
+
+          return (
+            current >= requirement.amount
+          );
         }
 
-        const current =
-          progress[requirement.gem] ?? 0;
+        if (
+          requirement.type ===
+          "equipment"
+        ) {
+          return inventory.equipment.some(
+            (equipment) =>
+              equipment.id ===
+              requirement.equipmentId
+          );
+        }
 
-        return (
-          current >= requirement.amount
-        );
+        return true;
       }
     );
 
@@ -152,22 +164,7 @@ export function isRecipeReady(
     player.money >= recipe.moneyCost;
 
   return (
-    gemsComplete &&
+    requirementsComplete &&
     moneyComplete
   );
-}
-
-export function resetRecipeProgress(
-  craftingState,
-  recipeId
-) {
-  delete craftingState.progress[recipeId];
-
-  if (
-    craftingState.activeAutoCraftRecipeId ===
-    recipeId
-  ) {
-    craftingState.activeAutoCraftRecipeId =
-      null;
-  }
 }
