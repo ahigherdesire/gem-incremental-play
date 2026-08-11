@@ -47,7 +47,7 @@ function getCooldownMs() {
   const stats =
     getPlayerStats(inventory);
 
-  const baseCooldownSeconds = 5;
+  const baseCooldownSeconds = 3;
 
   return (
     baseCooldownSeconds /
