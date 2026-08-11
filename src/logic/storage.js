@@ -53,26 +53,31 @@ export function loadInventory() {
       inventory.equipment = [];
     }
 
-    // Temporary v0.1 equipment migration:
-    // automatically equip the only item in a category
+    // Migrate older equipment saves that do not have tiers
+    const equipmentTiers = {
+      "crude-pickaxe": 1,
+      "reinforced-pickaxe": 2,
+      "polished-pickaxe": 3,
+      "refined-pickaxe": 4,
+      "masterwork-pickaxe": 5
+    };
+    
+    let equipmentMigrated = false;
+    
     for (const equipment of inventory.equipment) {
-      const sameCategory =
-        inventory.equipment.filter(
-          (item) =>
-            item.category === equipment.category
-        );
-    
-      const categoryHasEquipped =
-        sameCategory.some(
-          (item) => item.equipped
-        );
-    
       if (
-        sameCategory.length === 1 &&
-        !categoryHasEquipped
+        equipment.tier == null &&
+        equipmentTiers[equipment.id]
       ) {
-        equipment.equipped = true;
+        equipment.tier =
+          equipmentTiers[equipment.id];
+    
+        equipmentMigrated = true;
       }
+    }
+    
+    if (equipmentMigrated) {
+      saveInventory(inventory);
     }
     
     saveInventory(inventory);
