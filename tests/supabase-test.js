@@ -7,9 +7,12 @@ import {
 } from "../src/backend/supabase.js";
 
 const status =
-  document.getElementById("status");
+  document.getElementById(
+    "status"
+  );
 
-async function testRollFunction() {
+
+async function testServerRoll() {
   const user =
     await ensurePlayerAuth();
 
@@ -20,47 +23,78 @@ async function testRollFunction() {
     return;
   }
 
+
   const {
     data,
     error
   } =
-    await supabase.functions.invoke(
-      "roll-test",
-      {
-        body: {}
-      }
-    );
+    await supabase
+      .functions
+      .invoke(
+        "roll",
+        {
+          body: {}
+        }
+      );
+
 
   if (error) {
     console.error(
-      "Function error:",
+      "Server roll failed:",
       error
     );
 
     status.textContent =
-      "❌ Edge Function failed";
+      "❌ Server roll failed";
 
     return;
   }
 
+
   console.log(
-    "Function response:",
+    "Server roll:",
     data
   );
 
+
   status.innerHTML = `
-    ✅ Authenticated Edge Function works!
+    <h2>
+      ✅ Server Roll Works!
+    </h2>
 
-    <br><br>
+    <p>
+      Player:
+      ${data.playerId}
+    </p>
 
-    Browser Player ID:
-    <code>${user.id}</code>
+    <hr>
 
-    <br><br>
+    <h2>
+      ${data.gem.name}
+    </h2>
 
-    Server Player ID:
-    <code>${data.playerId}</code>
+    <p>
+      Rarity:
+      1 in
+      ${data.gem.rarity.toLocaleString()}
+    </p>
+
+    <p>
+      Weight:
+      ${data.finalWeight.toFixed(2)}g
+    </p>
+
+    <p>
+      Natural Weight Multiplier:
+      ${data.weightMultiplier.toFixed(3)}x
+    </p>
+
+    <p>
+      Value:
+      $${data.value.toFixed(2)}
+    </p>
   `;
 }
 
-testRollFunction();
+
+testServerRoll();
