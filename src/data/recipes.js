@@ -2,20 +2,15 @@ const recipes = [
   {
     id: "crude-pickaxe",
     name: "Crude Pickaxe",
-    category: "pickaxe",
 
-    cost: 250,
-
-    ingredients: [
-      { gem: "Quartz", amount: 5 },
-      { gem: "Feldspar", amount: 3 },
-      { gem: "Fluorite", amount: 2 },
-      { gem: "Amethyst", amount: 1 }
+    requirements: [
+      { type: "gem-count", gem: "Quartz", amount: 5 },
+      { type: "gem-count", gem: "Feldspar", amount: 3 },
+      { type: "gem-count", gem: "Fluorite", amount: 2 },
+      { type: "gem-count", gem: "Amethyst", amount: 1 }
     ],
 
-    bonus: {
-      luck: 0.05
-    }
+    moneyCost: 250
   }
 ];
 
