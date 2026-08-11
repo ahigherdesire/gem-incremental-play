@@ -30,8 +30,9 @@ let player =
 
 function renderInventory() {
   inventoryList.innerHTML = "";
+
   moneyDisplay.textContent =
-  `$${player.money.toFixed(2)}`;
+    `$${player.money.toFixed(2)}`;
 
   if (!inventory) {
     inventoryCount.textContent = "0 / 15";
@@ -50,18 +51,29 @@ function renderInventory() {
   }
 
   inventory.items.forEach((item, index) => {
-    const card = document.createElement("div");
+    const card =
+      document.createElement("div");
 
-    card.className = "inventory-item";
+    card.className =
+      "inventory-item";
 
     card.innerHTML = `
       <h2>${item.gem.name}</h2>
 
-      <p>Rarity: 1 in ${item.gem.rarity.toLocaleString()}</p>
+      <p>
+        Rarity:
+        1 in ${item.gem.rarity.toLocaleString()}
+      </p>
 
-      <p>Weight: ${item.finalWeight.toFixed(2)}g</p>
+      <p>
+        Weight:
+        ${item.finalWeight.toFixed(2)}g
+      </p>
 
-      <p>Value: $${item.value.toFixed(2)}</p>
+      <p>
+        Value:
+        $${item.value.toFixed(2)}
+      </p>
 
       <button class="lock-button">
         ${item.locked ? "🔒 Locked" : "🔓 Unlocked"}
@@ -72,31 +84,33 @@ function renderInventory() {
       </button>
     `;
 
-    card.querySelector(".lock-button")
+    card
+      .querySelector(".lock-button")
       .addEventListener("click", () => {
         toggleLock(inventory, index);
+
         saveInventory(inventory);
+
         renderInventory();
       });
 
-    card.querySelector(".sell-button")
+    card
+      .querySelector(".sell-button")
       .addEventListener("click", () => {
         if (item.locked) {
           return;
         }
 
         player.money += item.value;
-    
-        removeFromInventory(inventory, index);
-    
+
+        removeFromInventory(
+          inventory,
+          index
+        );
+
         saveInventory(inventory);
         savePlayer(player);
-    
-        renderInventory();
-      });
 
-        removeFromInventory(inventory, index);
-        saveInventory(inventory);
         renderInventory();
       });
 
@@ -104,4 +118,19 @@ function renderInventory() {
   });
 }
 
-renderInventory();
+function refreshInventoryPage() {
+  inventory =
+    loadInventory();
+
+  player =
+    loadPlayer() ?? createPlayer();
+
+  renderInventory();
+}
+
+window.addEventListener(
+  "pageshow",
+  refreshInventoryPage
+);
+
+refreshInventoryPage();
