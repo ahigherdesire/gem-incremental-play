@@ -33,6 +33,7 @@ const recipes = [
       id: "crude-pickaxe",
       name: "Crude Pickaxe",
       category: "pickaxe",
+      tier: 1,
 
       bonus: {
         luck: 0.05
@@ -78,6 +79,7 @@ const recipes = [
       id: "reinforced-pickaxe",
       name: "Reinforced Pickaxe",
       category: "pickaxe",
+      tier: 2,
 
       bonus: {
         luck: 0.15
@@ -123,6 +125,7 @@ const recipes = [
       id: "polished-pickaxe",
       name: "Polished Pickaxe",
       category: "pickaxe",
+      tier: 3,
 
       bonus: {
         luck: 0.50
@@ -168,6 +171,7 @@ const recipes = [
       id: "refined-pickaxe",
       name: "Refined Pickaxe",
       category: "pickaxe",
+      tier: 4,
 
       bonus: {
         luck: 0.80
@@ -218,6 +222,7 @@ const recipes = [
       id: "masterwork-pickaxe",
       name: "Masterwork Pickaxe",
       category: "pickaxe",
+      tier: 5,
 
       bonus: {
         luck: 1.50
