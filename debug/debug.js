@@ -5,6 +5,10 @@ import {
 } from "../src/logic/storage.js";
 
 import {
+  getPlayerStats
+} from "../src/logic/playerStats.js";
+
+import {
   createInventory
 } from "../src/logic/inventory.js";
 
@@ -20,17 +24,13 @@ import {
 const debugStats =
   document.getElementById("debugStats");
 
-const baseStats = {
-  luck: 1,
-  rollSpeed: 1,
-  weightLuck: 1,
-  weightMultiplier: 1
-};
-
 function renderDebug() {
   const inventory =
     loadInventory() ??
     createInventory();
+
+  const stats =
+  getPlayerStats(inventory);
 
   const craftingState =
     loadCraftingState() ??
@@ -62,22 +62,22 @@ function renderDebug() {
 
       <p>
         Luck:
-        ${baseStats.luck.toFixed(2)}x
+        ${stats.luck.toFixed(2)}x
       </p>
 
       <p>
         Roll Speed:
-        ${baseStats.rollSpeed.toFixed(2)}x
+        ${stats.rollSpeed.toFixed(2)}x
       </p>
 
       <p>
         Weight Luck:
-        ${baseStats.weightLuck.toFixed(2)}x
+        ${stats.weightLuck.toFixed(2)}x
       </p>
 
       <p>
         Weight Multiplier:
-        ${baseStats.weightMultiplier.toFixed(2)}x
+        ${stats.weightMultiplier.toFixed(2)}x
       </p>
     </div>
 
