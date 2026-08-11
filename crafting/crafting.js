@@ -78,7 +78,8 @@ function craftRecipe(recipe) {
     !isRecipeReady(
       craftingState,
       recipe,
-      player
+      player,
+      inventory
     )
   ) {
     return;
@@ -190,7 +191,8 @@ function renderRecipes() {
       isRecipeReady(
         craftingState,
         recipe,
-        player
+        player,
+        inventory
       );
 
     const card =
