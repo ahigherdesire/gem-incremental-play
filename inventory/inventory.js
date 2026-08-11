@@ -1,6 +1,6 @@
 import {
-  toggleLock,
-  removeFromInventory
+  toggleGemLock,
+  removeGemFromInventory
 } from "../src/logic/inventory.js";
 
 import {
@@ -42,15 +42,15 @@ function renderInventory() {
   }
 
   inventoryCount.textContent =
-    `${inventory.items.length} / ${inventory.capacity}`;
+    `${inventory.gems.length} / ${inventory.capacity}`;
 
-  if (inventory.items.length === 0) {
+  if (inventory.gems.length === 0) {
     inventoryList.innerHTML =
       "<p>Your inventory is empty.</p>";
     return;
   }
 
-  inventory.items.forEach((item, index) => {
+  inventory.gems.forEach((item, index) => {
     const card =
       document.createElement("div");
 
@@ -87,7 +87,7 @@ function renderInventory() {
     card
       .querySelector(".lock-button")
       .addEventListener("click", () => {
-        toggleLock(inventory, index);
+        toggleGemLock(inventory, index);
 
         saveInventory(inventory);
 
@@ -103,7 +103,7 @@ function renderInventory() {
 
         player.money += item.value;
 
-        removeFromInventory(
+        removeGemFromInventory(
           inventory,
           index
         );

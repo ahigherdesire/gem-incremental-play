@@ -2,7 +2,7 @@ import { rollResult } from "./src/logic/rollResult.js";
 
 import {
   createInventory,
-  addToInventory,
+  addGemToInventory,
   isInventoryFull
 } from "./src/logic/inventory.js";
 
@@ -192,7 +192,7 @@ rollButton.addEventListener(
 
     if (!autoDeposited) {
       const added =
-        addToInventory(
+        addGemToInventory(
           inventory,
           rolled
         );
@@ -234,7 +234,7 @@ rollButton.addEventListener(
           : `
             <p>
               Inventory:
-              ${inventory.items.length}/${inventory.capacity}
+              ${inventory.gems.length}/${inventory.capacity}
             </p>
           `
       }

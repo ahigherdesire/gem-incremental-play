@@ -84,7 +84,7 @@ export function manuallyDepositGem(
     return false;
   }
 
-  const eligible = inventory.items
+  const eligible = inventory.gems
     .map((item, index) => ({
       item,
       index
@@ -107,7 +107,7 @@ export function manuallyDepositGem(
   const selected =
     eligible[0];
 
-  inventory.items.splice(
+  inventory.gems.splice(
     selected.index,
     1
   );
