@@ -1,4 +1,5 @@
 import { rollResult } from "./src/logic/rollResult.js";
+
 import {
   createInventory,
   addToInventory,
@@ -18,11 +19,17 @@ const playerStats = {
   weightLuck: 1,
   weightMultiplier: 1,
   rollSpeed: 1
-  let inventory =
-  loadInventory() ?? createInventory();
 };
 
-let canRoll = true;
+let inventory =
+  loadInventory() ?? createInventory();
+
+let canRoll = !isInventoryFull(inventory);
+
+if (!canRoll) {
+  rollButton.disabled = true;
+  rollButton.textContent = "INVENTORY FULL";
+}
 
 function getCooldownMs() {
   const baseCooldownSeconds = 5;
@@ -65,13 +72,19 @@ rollButton.addEventListener("click", () => {
     </p>
 
     <p>Value: $${rolled.value.toFixed(2)}</p>
+
+    <p>
+      Inventory:
+      ${inventory.items.length}/${inventory.capacity}
+    </p>
   `;
 
   const cooldownMs = getCooldownMs();
 
   let remaining = cooldownMs;
 
-  rollButton.textContent = `ROLL (${(remaining / 1000).toFixed(1)}s)`;
+  rollButton.textContent =
+    `ROLL (${(remaining / 1000).toFixed(1)}s)`;
 
   const timer = setInterval(() => {
     remaining -= 100;
@@ -79,18 +92,18 @@ rollButton.addEventListener("click", () => {
     if (remaining <= 0) {
       clearInterval(timer);
 
-    if (isInventoryFull(inventory)) {
-      rollButton.disabled = true;
-      rollButton.textContent = "INVENTORY FULL";
-      canRoll = false;
-    } else {
-      canRoll = true;
-      rollButton.disabled = false;
-      rollButton.textContent = "ROLL";
+      if (isInventoryFull(inventory)) {
+        rollButton.disabled = true;
+        rollButton.textContent = "INVENTORY FULL";
+        canRoll = false;
+      } else {
+        canRoll = true;
+        rollButton.disabled = false;
+        rollButton.textContent = "ROLL";
+      }
+
+      return;
     }
-  
-    return;
-  }
 
     rollButton.textContent =
       `ROLL (${(remaining / 1000).toFixed(1)}s)`;
