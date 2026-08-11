@@ -8,7 +8,9 @@ export function createPlayer() {
     stats: {
       totalRolls: 0,
       rarestGem: null
-    }
+    },
+
+    gemIndex: {}
   };
 }
 
@@ -31,8 +33,7 @@ export function loadPlayer() {
     const player =
       JSON.parse(saved);
 
-    // Migrate older player saves
-    // that do not yet have stats.
+    // Migrate old player saves.
     if (!player.stats) {
       player.stats = {
         totalRolls: 0,
@@ -47,10 +48,13 @@ export function loadPlayer() {
     }
 
     if (
-      player.stats.rarestGem ===
-      undefined
+      player.stats.rarestGem === undefined
     ) {
       player.stats.rarestGem = null;
+    }
+
+    if (!player.gemIndex) {
+      player.gemIndex = {};
     }
 
     return player;
@@ -59,7 +63,10 @@ export function loadPlayer() {
   }
 }
 
-export function recordRoll(player, rolledGem) {
+export function recordRoll(
+  player,
+  rolled
+) {
   if (!player.stats) {
     player.stats = {
       totalRolls: 0,
@@ -67,17 +74,59 @@ export function recordRoll(player, rolledGem) {
     };
   }
 
+  if (!player.gemIndex) {
+    player.gemIndex = {};
+  }
+
+  // ---------------------------------
+  // Lifetime roll count
+  // ---------------------------------
+
   player.stats.totalRolls += 1;
+
+  // ---------------------------------
+  // Rarest gem ever
+  // ---------------------------------
 
   if (
     !player.stats.rarestGem ||
-    rolledGem.rarity >
+    rolled.gem.rarity >
       player.stats.rarestGem.rarity
   ) {
     player.stats.rarestGem = {
-      name: rolledGem.name,
-      rarity: rolledGem.rarity
+      name: rolled.gem.name,
+      rarity: rolled.gem.rarity
     };
+  }
+
+  // ---------------------------------
+  // Gem Index
+  // ---------------------------------
+
+  const gemName =
+    rolled.gem.name;
+
+  if (!player.gemIndex[gemName]) {
+    player.gemIndex[gemName] = {
+      discovered: true,
+      totalRolled: 0,
+      heaviestWeight: 0
+    };
+  }
+
+  const indexEntry =
+    player.gemIndex[gemName];
+
+  indexEntry.discovered = true;
+
+  indexEntry.totalRolled += 1;
+
+  if (
+    rolled.finalWeight >
+    indexEntry.heaviestWeight
+  ) {
+    indexEntry.heaviestWeight =
+      rolled.finalWeight;
   }
 
   savePlayer(player);
