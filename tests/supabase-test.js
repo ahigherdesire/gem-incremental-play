@@ -1,46 +1,33 @@
 import {
-  supabase
-} from "../src/backend/supabase.js";
+  ensurePlayerAuth
+} from "../src/backend/auth.js";
 
 const status =
   document.getElementById("status");
 
-async function testConnection() {
-  try {
-    const {
-      data,
-      error
-    } =
-      await supabase.auth.getSession();
+async function testAuth() {
+  const user =
+    await ensurePlayerAuth();
 
-    if (error) {
-      console.error(
-        "Supabase error:",
-        error
-      );
-
-      status.textContent =
-        "❌ Connection failed";
-
-      return;
-    }
-
-    console.log(
-      "Supabase response:",
-      data
-    );
-
+  if (!user) {
     status.textContent =
-      "✅ Supabase connection works!";
-  } catch (error) {
-    console.error(
-      "Unexpected error:",
-      error
-    );
+      "❌ Authentication failed";
 
-    status.textContent =
-      "❌ Connection failed";
+    return;
   }
+
+  console.log(
+    "Supabase user:",
+    user
+  );
+
+  status.innerHTML = `
+    ✅ Authentication works!
+    <br><br>
+
+    Player ID:
+    <code>${user.id}</code>
+  `;
 }
 
-testConnection();
+testAuth();
