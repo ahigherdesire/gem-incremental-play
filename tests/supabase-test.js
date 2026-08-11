@@ -3,13 +3,13 @@ import {
 } from "../src/backend/auth.js";
 
 import {
-  ensureCloudPlayer
-} from "../src/backend/playerCloud.js";
+  supabase
+} from "../src/backend/supabase.js";
 
 const status =
   document.getElementById("status");
 
-async function testBackend() {
+async function testRollFunction() {
   const user =
     await ensurePlayerAuth();
 
@@ -20,40 +20,47 @@ async function testBackend() {
     return;
   }
 
-  const cloudPlayer =
-    await ensureCloudPlayer(
-      user
+  const {
+    data,
+    error
+  } =
+    await supabase.functions.invoke(
+      "roll-test",
+      {
+        body: {}
+      }
     );
 
-  if (!cloudPlayer) {
+  if (error) {
+    console.error(
+      "Function error:",
+      error
+    );
+
     status.textContent =
-      "❌ Player database test failed";
+      "❌ Edge Function failed";
 
     return;
   }
 
   console.log(
-    "Cloud player:",
-    cloudPlayer
+    "Function response:",
+    data
   );
 
   status.innerHTML = `
-    ✅ Backend works!
+    ✅ Authenticated Edge Function works!
+
     <br><br>
 
-    Player ID:
+    Browser Player ID:
     <code>${user.id}</code>
 
     <br><br>
 
-    Cloud Player ID:
-    <code>${cloudPlayer.id}</code>
-
-    <br><br>
-
-    Last Seen:
-    ${cloudPlayer.last_seen}
+    Server Player ID:
+    <code>${data.playerId}</code>
   `;
 }
 
-testBackend();
+testRollFunction();
