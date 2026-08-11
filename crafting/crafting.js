@@ -11,7 +11,6 @@ import {
 
 import {
   addEquipment,
-  hasEquipment,
   hasEquipmentTierOrHigher
 } from "../src/logic/inventory.js";
 
@@ -34,6 +33,9 @@ const recipeList =
 const moneyDisplay =
   document.getElementById("money");
 
+const craftingTabs =
+  document.querySelectorAll(".crafting-tab");
+
 let craftingState =
   loadCraftingState() ??
   createCraftingState();
@@ -48,6 +50,13 @@ let inventory =
     gems: [],
     equipment: []
   };
+
+let selectedCategory = "pickaxe";
+
+
+// =========================================================
+// DISPLAY HELPERS
+// =========================================================
 
 function formatBonuses(bonus = {}) {
   const bonuses = [];
@@ -72,7 +81,10 @@ function formatBonuses(bonus = {}) {
 
   if (bonus.weightMultiplier) {
     bonuses.push(
-      `+${(bonus.weightMultiplier * 100).toFixed(0)}% Weight Multiplier`
+      `+${(
+        bonus.weightMultiplier *
+        100
+      ).toFixed(0)}% Weight Multiplier`
     );
   }
 
@@ -81,25 +93,41 @@ function formatBonuses(bonus = {}) {
     : "None";
 }
 
+
 function formatRequirementLabel(requirement) {
   switch (requirement.type) {
     case "gem-count":
       return requirement.gem;
 
     case "equipment":
-      return `Required: ${requirement.equipmentName ?? requirement.equipmentId}`;
+      return (
+        `Required: ` +
+        (
+          requirement.equipmentName ??
+          requirement.equipmentId
+        )
+      );
 
     case "gem-total-weight":
       return `${requirement.gem} total weight`;
 
     case "gem-min-weight-multiplier":
-      return `${requirement.gem} ≥ ${requirement.minimumWeightMultiplier}× weight`;
+      return (
+        `${requirement.gem} ≥ ` +
+        `${requirement.minimumWeightMultiplier}× weight`
+      );
 
     case "gem-max-weight-multiplier":
-      return `${requirement.gem} ≤ ${requirement.maximumWeightMultiplier}× weight`;
+      return (
+        `${requirement.gem} ≤ ` +
+        `${requirement.maximumWeightMultiplier}× weight`
+      );
 
     case "specimen-condition":
-      return requirement.label ?? "Special specimen";
+      return (
+        requirement.label ??
+        "Special specimen"
+      );
 
     case "specimen-value-total":
       return "Sacrifice value";
@@ -108,12 +136,16 @@ function formatRequirementLabel(requirement) {
       return "Rarity points";
 
     case "gem-range":
-      return requirement.label ?? "Gem collection";
+      return (
+        requirement.label ??
+        "Gem collection"
+      );
 
     default:
       return requirement.type;
   }
 }
+
 
 function formatRequirementProgress(
   requirement,
@@ -121,41 +153,56 @@ function formatRequirementProgress(
 ) {
   switch (requirement.type) {
     case "gem-count":
-      return `${progressValue ?? 0} / ${requirement.amount}`;
+      return (
+        `${progressValue ?? 0} / ` +
+        `${requirement.amount}`
+      );
 
     case "gem-total-weight":
-      return `${(progressValue ?? 0).toFixed(2)}g / ${requirement.totalWeight}g`;
+      return (
+        `${(progressValue ?? 0).toFixed(2)}g / ` +
+        `${requirement.totalWeight}g`
+      );
 
     case "gem-min-weight-multiplier":
     case "gem-max-weight-multiplier":
     case "specimen-condition":
-      return `${progressValue ?? 0} / ${requirement.amount ?? 1}`;
+      return (
+        `${progressValue ?? 0} / ` +
+        `${requirement.amount ?? 1}`
+      );
 
     case "specimen-value-total":
-      return `$${(progressValue ?? 0).toFixed(2)} / $${requirement.totalValue.toFixed(2)}`;
+      return (
+        `$${(progressValue ?? 0).toFixed(2)} / ` +
+        `$${requirement.totalValue.toFixed(2)}`
+      );
 
     case "rarity-points": {
       const points =
         progressValue?.points ?? 0;
-    
+
       const unique =
         progressValue?.gemTypes?.length ?? 0;
-    
+
       const minimumUnique =
         requirement.minimumUniqueGemTypes ?? 0;
-    
+
       if (minimumUnique > 0) {
         return (
           `${points} / ${requirement.points} points` +
           ` | ${unique} / ${minimumUnique} gem types`
         );
       }
-    
-      return `${points} / ${requirement.points}`;
+
+      return (
+        `${points} / ${requirement.points}`
+      );
     }
 
     case "gem-range": {
-      const current = progressValue ?? {};
+      const current =
+        progressValue ?? {};
 
       const completed =
         requirement.gems.filter(
@@ -164,7 +211,10 @@ function formatRequirementProgress(
             (requirement.amountEach ?? 1)
         ).length;
 
-      return `${completed} / ${requirement.gems.length} gems`;
+      return (
+        `${completed} / ` +
+        `${requirement.gems.length} gems`
+      );
     }
 
     default:
@@ -172,22 +222,94 @@ function formatRequirementProgress(
   }
 }
 
-function setAutoCraft(recipeId) {
-  if (
-    craftingState.activeAutoCraftRecipeId ===
-    recipeId
-  ) {
-    craftingState.activeAutoCraftRecipeId =
-      null;
-  } else {
-    craftingState.activeAutoCraftRecipeId =
-      recipeId;
+
+function getRequirementProgressKey(
+  requirement,
+  index
+) {
+  if (requirement.id) {
+    return requirement.id;
   }
 
-  saveCraftingState(craftingState);
+  if (
+    requirement.type ===
+    "gem-count"
+  ) {
+    return requirement.gem;
+  }
+
+  return (
+    `${requirement.type}-${index}`
+  );
+}
+
+
+// =========================================================
+// CRAFTING CATEGORY TABS
+// =========================================================
+
+function setCraftingCategory(category) {
+  selectedCategory =
+    category;
+
+  craftingTabs.forEach(
+    (tab) => {
+      tab.classList.toggle(
+        "active",
+        tab.dataset.category ===
+          category
+      );
+    }
+  );
 
   renderRecipes();
 }
+
+
+craftingTabs.forEach(
+  (tab) => {
+    tab.addEventListener(
+      "click",
+      () => {
+        setCraftingCategory(
+          tab.dataset.category
+        );
+      }
+    );
+  }
+);
+
+
+// =========================================================
+// AUTO CRAFT
+// =========================================================
+
+function setAutoCraft(recipeId) {
+  if (
+    craftingState
+      .activeAutoCraftRecipeId ===
+    recipeId
+  ) {
+    craftingState
+      .activeAutoCraftRecipeId =
+      null;
+  } else {
+    craftingState
+      .activeAutoCraftRecipeId =
+      recipeId;
+  }
+
+  saveCraftingState(
+    craftingState
+  );
+
+  renderRecipes();
+}
+
+
+// =========================================================
+// CRAFT ITEM
+// =========================================================
 
 function craftRecipe(recipe) {
   if (
@@ -214,29 +336,36 @@ function craftRecipe(recipe) {
   player.money -=
     recipe.moneyCost;
 
-  // Consume previous equipment if the recipe requires it
-  for (const requirement of recipe.requirements) {
+  // Consume previous equipment
+  // when upgrading.
+  for (
+    const requirement
+    of recipe.requirements
+  ) {
     if (
-      requirement.type ===
+      requirement.type !==
       "equipment"
     ) {
-      const index =
-        inventory.equipment.findIndex(
-          (equipment) =>
-            equipment.id ===
-            requirement.equipmentId
-        );
+      continue;
+    }
 
-      if (index !== -1) {
-        inventory.equipment.splice(
-          index,
-          1
-        );
-      }
+    const index =
+      inventory.equipment.findIndex(
+        (equipment) =>
+          equipment.id ===
+          requirement.equipmentId
+      );
+
+    if (index !== -1) {
+      inventory.equipment.splice(
+        index,
+        1
+      );
     }
   }
 
-  // Add and auto-equip the newly crafted equipment
+  // Add new equipment and
+  // automatically equip it.
   addEquipment(
     inventory,
     {
@@ -252,6 +381,7 @@ function craftRecipe(recipe) {
 
   savePlayer(player);
   saveInventory(inventory);
+
   saveCraftingState(
     craftingState
   );
@@ -259,13 +389,28 @@ function craftRecipe(recipe) {
   renderRecipes();
 }
 
+
+// =========================================================
+// RENDER RECIPES
+// =========================================================
+
 function renderRecipes() {
   recipeList.innerHTML = "";
 
   moneyDisplay.textContent =
     `$${player.money.toFixed(2)}`;
 
-  for (const recipe of recipes) {
+  const visibleRecipes =
+    recipes.filter(
+      (recipe) =>
+        recipe.category ===
+        selectedCategory
+    );
+
+  for (
+    const recipe
+    of visibleRecipes
+  ) {
     const progress =
       ensureRecipeProgress(
         craftingState,
@@ -281,92 +426,121 @@ function renderRecipes() {
 
     const requirementsHtml =
       recipe.requirements
-        .map((requirement, index) => {
-          if (requirement.type === "equipment") {
-            const requirementMet =
-              inventory.equipment.some(
-                (equipment) =>
-                  equipment.id ===
-                  requirement.equipmentId
+        .map(
+          (requirement, index) => {
+            // -------------------------
+            // EQUIPMENT REQUIREMENT
+            // -------------------------
+
+            if (
+              requirement.type ===
+              "equipment"
+            ) {
+              const requirementMet =
+                inventory.equipment.some(
+                  (equipment) =>
+                    equipment.id ===
+                    requirement.equipmentId
+                );
+
+              const requiredRecipe =
+                recipes.find(
+                  (otherRecipe) =>
+                    otherRecipe.reward
+                      ?.id ===
+                    requirement
+                      .equipmentId
+                );
+
+              const requiredName =
+                requiredRecipe
+                  ?.reward
+                  ?.name ??
+                requirement
+                  .equipmentName ??
+                requirement
+                  .equipmentId;
+
+              return `
+                <div class="requirement">
+                  <span>
+                    Required:
+                    ${requiredName}
+                  </span>
+
+                  <span>
+                    ${
+                      requirementMet
+                        ? "✓"
+                        : "✗"
+                    }
+                  </span>
+                </div>
+              `;
+            }
+
+            // -------------------------
+            // NORMAL / SPECIAL
+            // REQUIREMENT
+            // -------------------------
+
+            const key =
+              getRequirementProgressKey(
+                requirement,
+                index
               );
-    
-            const requiredRecipe =
-              recipes.find(
-                (otherRecipe) =>
-                  otherRecipe.reward?.id ===
-                  requirement.equipmentId
+
+            const value =
+              progress[key];
+
+            const complete =
+              isRequirementComplete(
+                craftingState,
+                recipe,
+                requirement,
+                index,
+                inventory
               );
-    
-            const requiredName =
-              requiredRecipe?.reward?.name ??
-              requirement.equipmentName ??
-              requirement.equipmentId;
-    
+
             return `
               <div class="requirement">
                 <span>
-                  Required: ${requiredName}
+                  ${formatRequirementLabel(
+                    requirement
+                  )}
                 </span>
-    
+
                 <span>
-                  ${requirementMet ? "✓" : "✗"}
+                  ${formatRequirementProgress(
+                    requirement,
+                    value
+                  )}
+
+                  ${
+                    complete
+                      ? "✓"
+                      : ""
+                  }
+
+                  ${
+                    !complete &&
+                    !owned
+                      ? `
+                        <button
+                          class="deposit-button"
+                          data-recipe="${recipe.id}"
+                          data-requirement-index="${index}"
+                        >
+                          Deposit
+                        </button>
+                      `
+                      : ""
+                  }
                 </span>
               </div>
             `;
           }
-    
-          const key =
-            requirement.id ??
-            (
-              requirement.type === "gem-count"
-                ? requirement.gem
-                : `${requirement.type}-${index}`
-            );
-    
-          const value =
-            progress[key];
-    
-          const complete =
-            isRequirementComplete(
-              craftingState,
-              recipe,
-              requirement,
-              index,
-              inventory
-            );
-    
-          return `
-            <div class="requirement">
-              <span>
-                ${formatRequirementLabel(requirement)}
-              </span>
-    
-              <span>
-                ${formatRequirementProgress(
-                  requirement,
-                  value
-                )}
-    
-                ${complete ? "✓" : ""}
-    
-                ${
-                  !complete &&
-                  !owned
-                    ? `
-                      <button
-                        class="deposit-button"
-                        data-recipe="${recipe.id}"
-                        data-requirement-index="${index}"
-                      >
-                        Deposit
-                      </button>
-                    `
-                    : ""
-                }
-              </span>
-            </div>
-          `;
-        })
+        )
         .join("");
 
     const moneyComplete =
@@ -401,7 +575,9 @@ function renderRecipes() {
 
       <p>
         Bonus:
-        ${formatBonuses(recipe.reward?.bonus)}
+        ${formatBonuses(
+          recipe.reward?.bonus
+        )}
       </p>
 
       ${
@@ -409,11 +585,6 @@ function renderRecipes() {
           ? `
             <p>
               ✓ Owned
-            </p>
-
-            <p>
-              Bonus:
-              ${formatBonuses(recipe.reward?.bonus)}
             </p>
           `
           : `
@@ -429,7 +600,11 @@ function renderRecipes() {
                   $${player.money.toFixed(2)}
                   /
                   $${recipe.moneyCost.toFixed(2)}
-                  ${moneyComplete ? "✓" : ""}
+                  ${
+                    moneyComplete
+                      ? "✓"
+                      : ""
+                  }
                 </span>
               </div>
             </div>
@@ -447,7 +622,11 @@ function renderRecipes() {
 
             <button
               class="craft-button"
-              ${ready ? "" : "disabled"}
+              ${
+                ready
+                  ? ""
+                  : "disabled"
+              }
             >
               Craft
             </button>
@@ -455,12 +634,18 @@ function renderRecipes() {
       }
     `;
 
+    // =====================================================
+    // BUTTON EVENTS
+    // =====================================================
+
     if (!owned) {
-      card
-        .querySelector(
+      const autoCraftButton =
+        card.querySelector(
           ".auto-craft-button"
-        )
-        .addEventListener(
+        );
+
+      autoCraftButton
+        ?.addEventListener(
           "click",
           () => {
             setAutoCraft(
@@ -469,16 +654,22 @@ function renderRecipes() {
           }
         );
 
-      card
-        .querySelector(
+
+      const craftButton =
+        card.querySelector(
           ".craft-button"
-        )
-        .addEventListener(
+        );
+
+      craftButton
+        ?.addEventListener(
           "click",
           () => {
-            craftRecipe(recipe);
+            craftRecipe(
+              recipe
+            );
           }
         );
+
 
       card
         .querySelectorAll(
@@ -490,23 +681,28 @@ function renderRecipes() {
               "click",
               () => {
                 const recipeId =
-                  button.dataset.recipe;
-            
+                  button.dataset
+                    .recipe;
+
                 const requirementIndex =
                   Number(
-                    button.dataset.requirementIndex
+                    button.dataset
+                      .requirementIndex
                   );
-            
+
                 const selectedRecipe =
                   recipes.find(
                     (recipe) =>
-                      recipe.id === recipeId
+                      recipe.id ===
+                      recipeId
                   );
-            
-                if (!selectedRecipe) {
+
+                if (
+                  !selectedRecipe
+                ) {
                   return;
                 }
-            
+
                 const deposited =
                   manuallyDepositRequirement(
                     craftingState,
@@ -514,14 +710,19 @@ function renderRecipes() {
                     inventory,
                     requirementIndex
                   );
-            
+
                 if (!deposited) {
                   return;
                 }
-            
-                saveInventory(inventory);
-                saveCraftingState(craftingState);
-            
+
+                saveInventory(
+                  inventory
+                );
+
+                saveCraftingState(
+                  craftingState
+                );
+
                 renderRecipes();
               }
             );
@@ -538,6 +739,11 @@ function renderRecipes() {
     craftingState
   );
 }
+
+
+// =========================================================
+// REFRESH PAGE STATE
+// =========================================================
 
 function refreshCraftingPage() {
   craftingState =
@@ -557,6 +763,7 @@ function refreshCraftingPage() {
 
   renderRecipes();
 }
+
 
 window.addEventListener(
   "pageshow",
