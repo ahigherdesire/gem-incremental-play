@@ -67,9 +67,10 @@ function setAutoCraft(recipeId) {
 
 function craftRecipe(recipe) {
   if (
-    hasEquipment(
+    hasEquipmentTierOrHigher(
       inventory,
       recipe.reward.id
+      recipe.reward.tier
     )
   ) {
     return;
@@ -151,6 +152,7 @@ function renderRecipes() {
       hasEquipment(
         inventory,
         recipe.reward.id
+        recipe.reward.tier
       );
 
     const requirementsHtml =
