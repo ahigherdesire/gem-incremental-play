@@ -145,9 +145,12 @@ function restoreGameState() {
   }
 }
 
-rollButton.addEventListener(
-  "click",
-  () => {
+  rollButton.addEventListener(
+    "click",
+    (event) => {
+      if (!event.isTrusted) {
+        return;
+      }
     refreshInventory();
     refreshCraftingState();
 
