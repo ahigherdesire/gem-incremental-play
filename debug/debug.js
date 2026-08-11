@@ -5,10 +5,6 @@ import {
 } from "../src/logic/storage.js";
 
 import {
-  getPlayerStats
-} from "../src/logic/playerStats.js";
-
-import {
   createInventory
 } from "../src/logic/inventory.js";
 
@@ -20,6 +16,10 @@ import {
   createPlayer,
   loadPlayer
 } from "../src/logic/player.js";
+
+import {
+  getPlayerStats
+} from "../src/logic/playerStats.js";
 
 const debugStats =
   document.getElementById("debugStats");
