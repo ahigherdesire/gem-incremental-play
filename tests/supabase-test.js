@@ -2,10 +2,14 @@ import {
   ensurePlayerAuth
 } from "../src/backend/auth.js";
 
+import {
+  ensureCloudPlayer
+} from "../src/backend/playerCloud.js";
+
 const status =
   document.getElementById("status");
 
-async function testAuth() {
+async function testBackend() {
   const user =
     await ensurePlayerAuth();
 
@@ -16,18 +20,40 @@ async function testAuth() {
     return;
   }
 
+  const cloudPlayer =
+    await ensureCloudPlayer(
+      user
+    );
+
+  if (!cloudPlayer) {
+    status.textContent =
+      "❌ Player database test failed";
+
+    return;
+  }
+
   console.log(
-    "Supabase user:",
-    user
+    "Cloud player:",
+    cloudPlayer
   );
 
   status.innerHTML = `
-    ✅ Authentication works!
+    ✅ Backend works!
     <br><br>
 
     Player ID:
     <code>${user.id}</code>
+
+    <br><br>
+
+    Cloud Player ID:
+    <code>${cloudPlayer.id}</code>
+
+    <br><br>
+
+    Last Seen:
+    ${cloudPlayer.last_seen}
   `;
 }
 
-testAuth();
+testBackend();
