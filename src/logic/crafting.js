@@ -53,3 +53,67 @@ export function tryAutoDeposit(
 
   return true;
 }
+
+export function manuallyDepositGem(
+  craftingState,
+  recipe,
+  inventory,
+  gemName
+) {
+  const progress =
+    ensureRecipeProgress(
+      craftingState,
+      recipe
+    );
+
+  const requirement =
+    recipe.requirements.find(
+      (req) =>
+        req.type === "gem-count" &&
+        req.gem === gemName
+    );
+
+  if (!requirement) {
+    return false;
+  }
+
+  const current =
+    progress[gemName] ?? 0;
+
+  if (current >= requirement.amount) {
+    return false;
+  }
+
+  const eligible = inventory.items
+    .map((item, index) => ({
+      item,
+      index
+    }))
+    .filter(
+      ({ item }) =>
+        item.gem.name === gemName &&
+        !item.locked
+    )
+    .sort(
+      (a, b) =>
+        a.item.finalWeight -
+        b.item.finalWeight
+    );
+
+  if (eligible.length === 0) {
+    return false;
+  }
+
+  const selected =
+    eligible[0];
+
+  inventory.items.splice(
+    selected.index,
+    1
+  );
+
+  progress[gemName] =
+    current + 1;
+
+  return true;
+}
