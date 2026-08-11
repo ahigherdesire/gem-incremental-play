@@ -1,4 +1,14 @@
 import { rollResult } from "./src/logic/rollResult.js";
+import {
+  createInventory,
+  addToInventory,
+  isInventoryFull
+} from "./src/logic/inventory.js";
+
+import {
+  saveInventory,
+  loadInventory
+} from "./src/logic/storage.js";
 
 const rollButton = document.getElementById("rollButton");
 const result = document.getElementById("result");
@@ -8,6 +18,8 @@ const playerStats = {
   weightLuck: 1,
   weightMultiplier: 1,
   rollSpeed: 1
+  let inventory =
+  loadInventory() ?? createInventory();
 };
 
 let canRoll = true;
@@ -30,6 +42,17 @@ rollButton.addEventListener("click", () => {
     playerStats.weightLuck,
     playerStats.weightMultiplier
   );
+
+  const added = addToInventory(inventory, rolled);
+
+  if (!added) {
+    rollButton.disabled = true;
+    rollButton.textContent = "INVENTORY FULL";
+    canRoll = false;
+    return;
+  }
+
+  saveInventory(inventory);
 
   result.innerHTML = `
     <h2>${rolled.gem.name}</h2>
@@ -56,12 +79,18 @@ rollButton.addEventListener("click", () => {
     if (remaining <= 0) {
       clearInterval(timer);
 
+    if (isInventoryFull(inventory)) {
+      rollButton.disabled = true;
+      rollButton.textContent = "INVENTORY FULL";
+      canRoll = false;
+    } else {
       canRoll = true;
       rollButton.disabled = false;
       rollButton.textContent = "ROLL";
-
-      return;
     }
+  
+    return;
+  }
 
     rollButton.textContent =
       `ROLL (${(remaining / 1000).toFixed(1)}s)`;
