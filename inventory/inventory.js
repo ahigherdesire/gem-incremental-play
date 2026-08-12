@@ -132,35 +132,6 @@ function getNextCapacityUpgrade() {
 }
 
 
-const capacityUpgrades = [
-  {
-    from: 15,
-    to: 20,
-    cost: 1000
-  },
-  {
-    from: 20,
-    to: 25,
-    cost: 3000
-  },
-  {
-    from: 25,
-    to: 30,
-    cost: 8000
-  },
-  {
-    from: 30,
-    to: 40,
-    cost: 20000
-  },
-  {
-    from: 40,
-    to: 50,
-    cost: 50000
-  }
-];
-
-
 function getNextCapacityUpgrade() {
   return capacityUpgrades.find(
     (upgrade) =>
