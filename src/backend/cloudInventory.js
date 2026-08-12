@@ -97,3 +97,33 @@ export async function toggleCloudGemLock(
 
   return data;
 }
+
+export async function sellCloudGem(
+  specimenId
+) {
+  const {
+    data,
+    error
+  } =
+    await supabase
+      .functions
+      .invoke(
+        "sell-gem",
+        {
+          body: {
+            specimenId
+          }
+        }
+      );
+
+  if (error) {
+    console.error(
+      "Failed to sell cloud gem:",
+      error
+    );
+
+    return null;
+  }
+
+  return data;
+}
