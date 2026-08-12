@@ -7,6 +7,10 @@ import {
 } from "./src/backend/auth.js";
 
 import {
+  ensureCloudPlayer
+} from "./src/backend/playerCloud.js";
+
+import {
   supabase
 } from "./src/backend/supabase.js";
 
@@ -606,7 +610,32 @@ async function startGame() {
 
     return;
   }
+  // =================================
+  // ENSURE CLOUD PLAYER EXISTS
+  // =================================
 
+  const cloudPlayer =
+    await ensureCloudPlayer(user);
+
+  if (!cloudPlayer) {
+    rollButton.disabled =
+      true;
+
+    rollButton.textContent =
+      "SAVE ERROR";
+
+    result.innerHTML = `
+      <h2>
+        Save Error
+      </h2>
+
+      <p>
+        Could not create or load your cloud save.
+      </p>
+    `;
+
+    return;
+  }
 
   // =================================
   // LEGACY MIGRATION GATE
