@@ -20,7 +20,8 @@ import {
 
 import {
   loadCloudGems,
-  loadCloudCapacity
+  loadCloudCapacity,
+  toggleCloudGemLock
 } from "../src/backend/cloudInventory.js";
 
 
