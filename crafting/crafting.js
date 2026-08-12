@@ -9,7 +9,8 @@ import {
 import {
   loadCloudCraftingState,
   manuallyDepositCloudRequirement,
-  craftCloudRecipe
+  craftCloudRecipe,
+  setCloudAutoCraft
 } from "../src/backend/cloudCrafting.js";
 
 import {
