@@ -105,17 +105,17 @@ async function renderDebug() {
   // =================================
 
   const totalRolls =
-    player.totalRolls ??
+    player.stats?.totalRolls ??
     0;
-
+  
   let rarestGemText =
     "None";
-
+  
   if (
-    player.rarestGem
+    player.stats?.rarestGem
   ) {
     const rarestGem =
-      player.rarestGem;
+      player.stats.rarestGem;
 
     if (
       typeof rarestGem ===
