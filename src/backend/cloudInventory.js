@@ -32,7 +32,7 @@ export async function loadCloudGems() {
 
   if (error) {
     console.error(
-      "Failed to load cloud inventory:",
+      "Failed to load cloud gems:",
       error
     );
 
@@ -40,4 +40,29 @@ export async function loadCloudGems() {
   }
 
   return data;
+}
+
+
+export async function loadCloudCapacity() {
+  const {
+    data,
+    error
+  } =
+    await supabase
+      .from("players")
+      .select(
+        "inventory_capacity"
+      )
+      .single();
+
+  if (error) {
+    console.error(
+      "Failed to load cloud capacity:",
+      error
+    );
+
+    return null;
+  }
+
+  return data.inventory_capacity;
 }
