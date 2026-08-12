@@ -66,3 +66,33 @@ export async function loadCloudCapacity() {
 
   return data.inventory_capacity;
 }
+
+export async function toggleCloudGemLock(
+  specimenId
+) {
+  const {
+    data,
+    error
+  } =
+    await supabase
+      .functions
+      .invoke(
+        "toggle-gem-lock",
+        {
+          body: {
+            specimenId
+          }
+        }
+      );
+
+  if (error) {
+    console.error(
+      "Failed to toggle gem lock:",
+      error
+    );
+
+    return null;
+  }
+
+  return data;
+}
