@@ -260,14 +260,56 @@ function renderGems() {
           }
         </p>
 
-        <button disabled>
-          Lock / Unlock
+        <button class="lock-button">
+          ${
+            gem.locked
+              ? "🔓 Unlock"
+              : "🔒 Lock"
+          }
         </button>
 
         <button disabled>
           Sell
         </button>
       `;
+
+      card
+        .querySelector(
+          ".lock-button"
+        )
+        .addEventListener(
+          "click",
+          async () => {
+            const button =
+              card.querySelector(
+                ".lock-button"
+              );
+      
+            button.disabled =
+              true;
+      
+      
+            const result =
+              await toggleCloudGemLock(
+                gem.id
+              );
+      
+      
+            if (!result) {
+              button.disabled =
+                false;
+      
+              return;
+            }
+      
+      
+            // Reload inventory
+            // from Supabase so the UI
+            // reflects the server state.
+      
+            await refreshInventoryPage();
+          }
+        );
 
       inventoryList.appendChild(
         card
