@@ -26,6 +26,10 @@ import {
   upgradeCloudInventory
 } from "../src/backend/cloudInventory.js";
 
+import {
+  loadCloudEquipment
+} from "../src/backend/cloudEquipment.js";
+
 
 // =========================================================
 // DOM ELEMENTS
@@ -89,6 +93,8 @@ let cloudGems = [];
 let cloudCapacity = 15;
 
 let cloudMoney = 0;
+
+let cloudEquipment = [];
 
 
 // =========================================================
@@ -403,7 +409,7 @@ function renderEquipment() {
   equipmentList.innerHTML = "";
 
   if (
-    inventory.equipment.length === 0
+    cloudEquipment.length === 0
   ) {
     equipmentList.innerHTML =
       "<p>You do not own any equipment yet.</p>";
@@ -411,7 +417,7 @@ function renderEquipment() {
     return;
   }
 
-  inventory.equipment.forEach(
+  cloudEquipment.forEach(
     (equipment) => {
       const card =
         document.createElement(
@@ -423,56 +429,49 @@ function renderEquipment() {
 
       const bonuses = [];
 
-
       if (
-        equipment.bonus?.luck
+        equipment.luck_bonus !== 0
       ) {
         bonuses.push(
           `+${(
-            equipment.bonus.luck *
+            equipment.luck_bonus *
             100
           ).toFixed(0)}% Luck`
         );
       }
 
-
       if (
-        equipment.bonus?.rollSpeed
+        equipment.roll_speed_bonus !== 0
       ) {
         bonuses.push(
           `+${(
-            equipment.bonus.rollSpeed *
+            equipment.roll_speed_bonus *
             100
           ).toFixed(0)}% Roll Speed`
         );
       }
 
-
       if (
-        equipment.bonus?.weightLuck
+        equipment.weight_luck_bonus !== 0
       ) {
         bonuses.push(
           `+${(
-            equipment.bonus.weightLuck *
+            equipment.weight_luck_bonus *
             100
           ).toFixed(0)}% Weight Luck`
         );
       }
 
-
       if (
-        equipment.bonus
-          ?.weightMultiplier
+        equipment.weight_multiplier_bonus !== 0
       ) {
         bonuses.push(
           `+${(
-            equipment.bonus
-              .weightMultiplier *
+            equipment.weight_multiplier_bonus *
             100
           ).toFixed(0)}% Weight Multiplier`
         );
       }
-
 
       card.innerHTML = `
         <h2>
@@ -486,7 +485,7 @@ function renderEquipment() {
 
         <p>
           Tier:
-          ${equipment.tier ?? "?"}
+          ${equipment.tier}
         </p>
 
         <p>
@@ -507,7 +506,6 @@ function renderEquipment() {
           }
         </p>
       `;
-
 
       equipmentList.appendChild(
         card
@@ -607,6 +605,14 @@ async function refreshInventoryPage() {
 
     cloudMoney =
       cloudPlayerState.money;
+  
+    const loadedEquipment =
+      await loadCloudEquipment();
+  
+    if (loadedEquipment) {
+      cloudEquipment =
+        loadedEquipment;
+    }
   }
 
 
