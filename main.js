@@ -1,6 +1,9 @@
 import recipes from "./src/data/recipes.js";
 
-import { ensurePlayerAuth } from "./src/backend/auth.js";
+import {
+  ensurePlayerAuth,
+  getLastAuthError
+} from "./src/backend/auth.js";
 import { invokeFunction } from "./src/backend/invoke.js";
 import { supabase } from "./src/backend/supabase.js";
 import { runLegacyMigrationGate } from "./src/backend/legacyMigration.js";
@@ -635,11 +638,20 @@ async function startGame() {
   const user = await ensurePlayerAuth();
 
   if (!user) {
-    showError("Could not sign you in. Refresh to try again.");
+    // Which stage failed matters when diagnosing a player who
+    // cannot start at all, so it is shown rather than buried in
+    // the console.
+    const authError = getLastAuthError();
+
+    showError(
+      authError
+        ? `Could not start your save (${authError.stage}): ${authError.message}`
+        : "Could not sign you in. Refresh to try again."
+    );
 
     notify.error(
       "Sign-in failed",
-      "The game could not reach the account service."
+      authError?.message ?? "The game could not reach the account service."
     );
 
     return;
@@ -659,14 +671,15 @@ async function startGame() {
     return;
   }
 
-  await restoreCooldown();
+  await restoreCooldown(user.id);
 }
 
 
-async function restoreCooldown() {
+async function restoreCooldown(userId) {
   const { data, error } = await supabase
     .from("players")
     .select("next_roll_at")
+    .eq("id", userId)
     .maybeSingle();
 
   if (error) {
@@ -687,12 +700,22 @@ async function restoreCooldown() {
 }
 
 
-window.addEventListener("pageshow", (event) => {
+window.addEventListener("pageshow", async (event) => {
   // Returning through the back/forward cache: the save may have
   // changed on another page.
-  if (event.persisted) {
-    refreshPlayerState().then(restoreCooldown);
+  if (!event.persisted) {
+    return;
   }
+
+  const user = await ensurePlayerAuth();
+
+  if (!user) {
+    return;
+  }
+
+  await refreshPlayerState();
+
+  await restoreCooldown(user.id);
 });
 
 

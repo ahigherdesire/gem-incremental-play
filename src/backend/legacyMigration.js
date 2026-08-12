@@ -462,6 +462,7 @@ function showMigrationChoice(
             () => {
               overlay.remove();
 
+
               resolve({
                 migrated:
                   true,
@@ -508,6 +509,87 @@ function showMigrationChoice(
           }
 
 
+          migrateButton.disabled =
+            true;
+
+          freshButton.disabled =
+            true;
+
+
+          status.textContent =
+            "Creating fresh cloud save...";
+
+
+          const user =
+            await ensurePlayerAuth();
+
+
+          if (!user) {
+            status.textContent =
+              "Could not authenticate player.";
+
+
+            migrateButton.disabled =
+              false;
+
+            freshButton.disabled =
+              false;
+
+
+            return;
+          }
+
+
+          // =================================================
+          // ENSURE PLAYER ROW EXISTS
+          // =================================================
+
+          const {
+            error: playerCreateError
+          } =
+            await supabase
+              .from("players")
+              .upsert(
+                {
+                  id:
+                    user.id
+                },
+                {
+                  onConflict:
+                    "id",
+
+                  ignoreDuplicates:
+                    true
+                }
+              );
+
+
+          if (playerCreateError) {
+            console.error(
+              "Could not create fresh player:",
+              playerCreateError
+            );
+
+
+            status.textContent =
+              "Could not create fresh cloud save.";
+
+
+            migrateButton.disabled =
+              false;
+
+            freshButton.disabled =
+              false;
+
+
+            return;
+          }
+
+
+          // =================================================
+          // REMEMBER PLAYER CHOSE FRESH
+          // =================================================
+
           localStorage.setItem(
             FRESH_CHOICE_KEY,
             "fresh"
@@ -545,6 +627,7 @@ export async function runLegacyMigrationGate() {
       "Could not authenticate player before migration check."
     );
 
+
     return {
       migrated:
         false,
@@ -555,7 +638,8 @@ export async function runLegacyMigrationGate() {
   }
 
 
-  // Player explicitly chose a new save on this browser.
+  // Player explicitly chose a new save
+  // on this browser.
   if (
     localStorage.getItem(
       FRESH_CHOICE_KEY
@@ -598,8 +682,6 @@ export async function runLegacyMigrationGate() {
 
 
   if (!cloudStatus) {
-    // Don't block the game because a migration-status
-    // check failed.
     return {
       migrated:
         false,
@@ -626,9 +708,6 @@ export async function runLegacyMigrationGate() {
   if (
     cloudStatus.hasCloudProgress
   ) {
-    // This account has already started playing on
-    // the backend, so automatically treating the old
-    // local save as migratable would be unsafe.
     return {
       migrated:
         false,
