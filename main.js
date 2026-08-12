@@ -480,9 +480,7 @@ async function performServerRoll() {
         ? `
           <p>
             Auto-deposited into
-            <strong>
-              ${autoCraftName}
-            </strong>.
+            <strong>${autoCraftName}</strong>.
           </p>
         `
         : `
