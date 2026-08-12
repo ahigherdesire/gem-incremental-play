@@ -44,6 +44,27 @@ const moneyDisplay =
 const craftingTabs =
   document.querySelectorAll(".crafting-tab");
 
+let craftingState =
+  createCraftingState();
+
+let player =
+  loadPlayer() ??
+  createPlayer();
+
+let inventory =
+  loadInventory() ?? {
+    capacity: 15,
+    gems: [],
+    equipment: []
+  };
+
+let selectedCategory = "pickaxe";
+
+
+// =========================================================
+// DISPLAY HELPERS
+// =========================================================
+
 async function loadCraftingPageState() {
   const user =
     await ensurePlayerAuth();
@@ -74,24 +95,6 @@ async function loadCraftingPageState() {
 
   return true;
 }
-
-let player =
-  loadPlayer() ??
-  createPlayer();
-
-let inventory =
-  loadInventory() ?? {
-    capacity: 15,
-    gems: [],
-    equipment: []
-  };
-
-let selectedCategory = "pickaxe";
-
-
-// =========================================================
-// DISPLAY HELPERS
-// =========================================================
 
 function formatBonuses(bonus = {}) {
   const bonuses = [];
