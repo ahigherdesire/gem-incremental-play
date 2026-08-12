@@ -43,28 +43,29 @@ export async function loadCloudGems() {
 }
 
 
-export async function loadCloudCapacity() {
+export async function loadCloudPlayerState() {
   const {
     data,
     error
   } =
     await supabase
       .from("players")
-      .select(
-        "inventory_capacity"
-      )
+      .select(`
+        inventory_capacity,
+        money
+      `)
       .single();
 
   if (error) {
     console.error(
-      "Failed to load cloud capacity:",
+      "Failed to load cloud player state:",
       error
     );
 
     return null;
   }
 
-  return data.inventory_capacity;
+  return data;
 }
 
 export async function toggleCloudGemLock(
