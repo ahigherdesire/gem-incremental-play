@@ -126,15 +126,6 @@ const capacityUpgrades = [
 function getNextCapacityUpgrade() {
   return capacityUpgrades.find(
     (upgrade) =>
-      upgrade.capacity >
-      inventory.capacity
-  );
-}
-
-
-function getNextCapacityUpgrade() {
-  return capacityUpgrades.find(
-    (upgrade) =>
       upgrade.from ===
       cloudCapacity
   );
