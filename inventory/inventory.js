@@ -22,7 +22,8 @@ import {
   loadCloudGems,
   loadCloudPlayerState,
   toggleCloudGemLock,
-  sellCloudGem
+  sellCloudGem,
+  upgradeCloudInventory
 } from "../src/backend/cloudInventory.js";
 
 
@@ -131,15 +132,77 @@ function getNextCapacityUpgrade() {
 }
 
 
+const capacityUpgrades = [
+  {
+    from: 15,
+    to: 20,
+    cost: 1000
+  },
+  {
+    from: 20,
+    to: 25,
+    cost: 3000
+  },
+  {
+    from: 25,
+    to: 30,
+    cost: 8000
+  },
+  {
+    from: 30,
+    to: 40,
+    cost: 20000
+  },
+  {
+    from: 40,
+    to: 50,
+    cost: 50000
+  }
+];
+
+
+function getNextCapacityUpgrade() {
+  return capacityUpgrades.find(
+    (upgrade) =>
+      upgrade.from ===
+      cloudCapacity
+  );
+}
+
+
 function renderCapacityUpgrade() {
   capacityStatus.textContent =
     `${cloudCapacity} slots`;
 
+
+  const nextUpgrade =
+    getNextCapacityUpgrade();
+
+
+  if (!nextUpgrade) {
+    capacityUpgradeInfo.textContent =
+      "Maximum capacity reached.";
+
+    capacityUpgradeButton.disabled =
+      true;
+
+    capacityUpgradeButton.textContent =
+      "MAXED";
+
+    return;
+  }
+
+
   capacityUpgradeInfo.textContent =
-    "Capacity upgrades are temporarily unavailable during cloud migration.";
+    `Next upgrade: ` +
+    `${nextUpgrade.to} slots — ` +
+    `$${nextUpgrade.cost.toLocaleString()}`;
+
 
   capacityUpgradeButton.disabled =
-    true;
+    cloudMoney <
+    nextUpgrade.cost;
+
 
   capacityUpgradeButton.textContent =
     "Upgrade Capacity";
@@ -513,39 +576,25 @@ function renderInventory() {
 
 capacityUpgradeButton.addEventListener(
   "click",
-  () => {
-    const nextUpgrade =
-      getNextCapacityUpgrade();
+  async () => {
+    capacityUpgradeButton.disabled =
+      true;
 
-    if (!nextUpgrade) {
+
+    const result =
+      await upgradeCloudInventory();
+
+
+    if (!result) {
+      await refreshInventoryPage();
+
       return;
     }
 
-    if (
-      player.money <
-      nextUpgrade.cost
-    ) {
-      return;
-    }
 
-    player.money -=
-      nextUpgrade.cost;
-
-    inventory.capacity =
-      nextUpgrade.capacity;
-
-    savePlayer(
-      player
-    );
-
-    saveInventory(
-      inventory
-    );
-
-    renderInventory();
+    await refreshInventoryPage();
   }
 );
-
 
 // =========================================================
 // REFRESH SAVED STATE
