@@ -702,7 +702,7 @@ function renderRecipes() {
                 </span>
 
                 <span>
-                  $${player.money.toFixed(2)}
+                  $${cloudMoney.toFixed(2)}
                   /
                   $${recipe.moneyCost.toFixed(2)}
 
