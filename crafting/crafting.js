@@ -27,6 +27,14 @@ import {
   savePlayer
 } from "../src/logic/player.js";
 
+import {
+  loadCloudCraftingState
+} from "../src/backend/cloudCrafting.js";
+
+import {
+  ensurePlayerAuth
+} from "../src/backend/auth.js";
+
 const recipeList =
   document.getElementById("recipeList");
 
@@ -36,9 +44,36 @@ const moneyDisplay =
 const craftingTabs =
   document.querySelectorAll(".crafting-tab");
 
-let craftingState =
-  loadCraftingState() ??
-  createCraftingState();
+async function loadCraftingPageState() {
+  const user =
+    await ensurePlayerAuth();
+
+  if (!user) {
+    console.error(
+      "Could not authenticate player."
+    );
+
+    return false;
+  }
+
+
+  const cloudState =
+    await loadCloudCraftingState();
+
+  if (!cloudState) {
+    console.error(
+      "Could not load cloud crafting state."
+    );
+
+    return false;
+  }
+
+
+  craftingState =
+    cloudState;
+
+  return true;
+}
 
 let player =
   loadPlayer() ??
@@ -745,29 +780,16 @@ function renderRecipes() {
 // REFRESH PAGE STATE
 // =========================================================
 
-function refreshCraftingPage() {
-  craftingState =
-    loadCraftingState() ??
-    createCraftingState();
+async function initializeCraftingPage() {
+  const loaded =
+    await loadCraftingPageState();
 
-  player =
-    loadPlayer() ??
-    createPlayer();
-
-  inventory =
-    loadInventory() ?? {
-      capacity: 15,
-      gems: [],
-      equipment: []
-    };
+  if (!loaded) {
+    return;
+  }
 
   renderRecipes();
 }
 
 
-window.addEventListener(
-  "pageshow",
-  refreshCraftingPage
-);
-
-refreshCraftingPage();
+initializeCraftingPage();
