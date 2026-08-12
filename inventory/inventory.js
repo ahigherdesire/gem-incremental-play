@@ -97,27 +97,28 @@ let cloudMoney = 0;
 
 const capacityUpgrades = [
   {
-    capacity: 20,
+    from: 15,
+    to: 20,
     cost: 1000
   },
-
   {
-    capacity: 25,
+    from: 20,
+    to: 25,
     cost: 3000
   },
-
   {
-    capacity: 30,
+    from: 25,
+    to: 30,
     cost: 8000
   },
-
   {
-    capacity: 40,
+    from: 30,
+    to: 40,
     cost: 20000
   },
-
   {
-    capacity: 50,
+    from: 40,
+    to: 50,
     cost: 50000
   }
 ];
