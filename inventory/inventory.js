@@ -206,7 +206,6 @@ function renderGems() {
   inventoryCount.textContent =
     `${cloudGems.length} / ${cloudCapacity}`;
 
-
   if (
     cloudGems.length === 0
   ) {
@@ -215,7 +214,6 @@ function renderGems() {
 
     return;
   }
-
 
   cloudGems.forEach(
     (gem) => {
@@ -226,7 +224,6 @@ function renderGems() {
 
       card.className =
         "inventory-item";
-
 
       card.innerHTML = `
         <h2>
@@ -270,50 +267,6 @@ function renderGems() {
           Sell
         </button>
       `;
-
-
-      inventoryList.appendChild(
-        card
-      );
-    }
-  );
-}
-
-      // -------------------------
-      // SELL GEM
-      // -------------------------
-
-      card
-        .querySelector(
-          ".sell-button"
-        )
-        .addEventListener(
-          "click",
-          () => {
-            if (item.locked) {
-              return;
-            }
-
-            player.money +=
-              item.value;
-
-            removeGemFromInventory(
-              inventory,
-              index
-            );
-
-            saveInventory(
-              inventory
-            );
-
-            savePlayer(
-              player
-            );
-
-            renderInventory();
-          }
-        );
-
 
       inventoryList.appendChild(
         card
