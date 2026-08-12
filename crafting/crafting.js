@@ -3,41 +3,26 @@ import recipes from "../src/data/recipes.js";
 import {
   createCraftingState,
   ensureRecipeProgress,
-  isRequirementComplete,
-  isRecipeReady,
-  resetRecipeProgress
+  isRequirementComplete
 } from "../src/logic/crafting.js";
 
 import {
-  addEquipment,
-  hasEquipmentTierOrHigher
-} from "../src/logic/inventory.js";
-
-import {
-  loadInventory,
-  saveInventory,
-  loadCraftingState,
-  saveCraftingState
-} from "../src/logic/storage.js";
-
-import {
-  createPlayer,
-  loadPlayer,
-  savePlayer
-} from "../src/logic/player.js";
-
-import {
   loadCloudCraftingState,
-  manuallyDepositCloudRequirement
+  manuallyDepositCloudRequirement,
+  craftCloudRecipe
 } from "../src/backend/cloudCrafting.js";
 
 import {
-  ensurePlayerAuth
-} from "../src/backend/auth.js";
+  loadCloudEquipment
+} from "../src/backend/cloudEquipment.js";
 
 import {
   loadCloudPlayerState
 } from "../src/backend/cloudInventory.js";
+
+import {
+  ensurePlayerAuth
+} from "../src/backend/auth.js";
 
 
 const recipeList =
@@ -59,25 +44,18 @@ const craftingTabs =
 let craftingState =
   createCraftingState();
 
-let player =
-  loadPlayer() ??
-  createPlayer();
+let cloudEquipment =
+  [];
 
-let inventory =
-  loadInventory() ?? {
-    capacity: 15,
-    gems: [],
-    equipment: []
-  };
+let cloudMoney =
+  0;
 
 let selectedCategory =
   "pickaxe";
 
-let cloudMoney = 0;
-
 
 // =========================================================
-// LOAD CLOUD CRAFTING STATE
+// LOAD CLOUD PAGE STATE
 // =========================================================
 
 async function loadCraftingPageState() {
@@ -93,12 +71,25 @@ async function loadCraftingPageState() {
   }
 
 
-  const cloudState =
-    await loadCloudCraftingState();
+  const [
+    cloudState,
+    cloudPlayerState,
+    loadedEquipment
+  ] =
+    await Promise.all([
+      loadCloudCraftingState(),
+      loadCloudPlayerState(),
+      loadCloudEquipment()
+    ]);
 
-  if (!cloudState) {
+
+  if (
+    !cloudState ||
+    !cloudPlayerState ||
+    !loadedEquipment
+  ) {
     console.error(
-      "Could not load cloud crafting state."
+      "Could not load crafting page state."
     );
 
     return false;
@@ -108,21 +99,48 @@ async function loadCraftingPageState() {
   craftingState =
     cloudState;
 
-  const cloudPlayerState =
-    await loadCloudPlayerState();
-  
-  if (!cloudPlayerState) {
-    console.error(
-      "Could not load cloud player state."
-    );
-  
-    return false;
-  }
-  
   cloudMoney =
-    cloudPlayerState.money
+    Number(
+      cloudPlayerState.money ??
+      0
+    );
+
+  cloudEquipment =
+    loadedEquipment;
+
 
   return true;
+}
+
+
+// =========================================================
+// EQUIPMENT HELPERS
+// =========================================================
+
+function hasCloudEquipment(
+  equipmentId
+) {
+  return cloudEquipment.some(
+    (equipment) =>
+      equipment.equipment_id ===
+      equipmentId
+  );
+}
+
+
+function hasCloudEquipmentTierOrHigher(
+  category,
+  tier
+) {
+  return cloudEquipment.some(
+    (equipment) =>
+      equipment.category ===
+        category &&
+      Number(
+        equipment.tier
+      ) >=
+        tier
+  );
 }
 
 
@@ -268,7 +286,7 @@ function formatRequirementProgress(
 
     case "gem-total-weight":
       return (
-        `${(
+        `${Number(
           progressValue ??
           0
         ).toFixed(2)}g / ` +
@@ -287,11 +305,13 @@ function formatRequirementProgress(
 
     case "specimen-value-total":
       return (
-        `$${(
+        `$${Number(
           progressValue ??
           0
         ).toFixed(2)} / ` +
-        `$${requirement.totalValue.toFixed(2)}`
+        `$${Number(
+          requirement.totalValue
+        ).toFixed(2)}`
       );
 
 
@@ -314,8 +334,7 @@ function formatRequirementProgress(
 
 
       if (
-        minimumUnique >
-        0
+        minimumUnique > 0
       ) {
         return (
           `${points} / ${requirement.points} points` +
@@ -392,6 +411,61 @@ function getRequirementProgressKey(
 
 
 // =========================================================
+// CLOUD RECIPE READY CHECK
+// =========================================================
+
+function isCloudRecipeReady(
+  recipe
+) {
+  const requirementsComplete =
+    recipe.requirements.every(
+      (
+        requirement,
+        index
+      ) => {
+        if (
+          requirement.type ===
+          "equipment"
+        ) {
+          return hasCloudEquipment(
+            requirement.equipmentId
+          );
+        }
+
+
+        return isRequirementComplete(
+          craftingState,
+          recipe,
+          requirement,
+          index,
+          {
+            equipment:
+              cloudEquipment.map(
+                (equipment) => ({
+                  id:
+                    equipment
+                      .equipment_id
+                })
+              )
+          }
+        );
+      }
+    );
+
+
+  const moneyComplete =
+    cloudMoney >=
+    recipe.moneyCost;
+
+
+  return (
+    requirementsComplete &&
+    moneyComplete
+  );
+}
+
+
+// =========================================================
 // CRAFTING CATEGORY TABS
 // =========================================================
 
@@ -432,40 +506,6 @@ craftingTabs.forEach(
 
 
 // =========================================================
-// AUTO CRAFT
-//
-// TEMPORARILY DISABLED
-// UNTIL SERVER MIGRATION
-// =========================================================
-
-function setAutoCraft(
-  recipeId
-) {
-  console.warn(
-    "Auto Craft is temporarily disabled during cloud migration.",
-    recipeId
-  );
-}
-
-
-// =========================================================
-// CRAFT ITEM
-//
-// TEMPORARILY DISABLED
-// UNTIL SERVER MIGRATION
-// =========================================================
-
-function craftRecipe(
-  recipe
-) {
-  console.warn(
-    "Crafting is temporarily disabled during cloud migration.",
-    recipe.id
-  );
-}
-
-
-// =========================================================
 // RENDER RECIPES
 // =========================================================
 
@@ -473,13 +513,6 @@ function renderRecipes() {
   recipeList.innerHTML =
     "";
 
-
-  // ---------------------------------------------------------
-  // TEMPORARILY LOCAL MONEY DISPLAY
-  //
-  // We'll migrate this properly
-  // when Craft is server-side.
-  // ---------------------------------------------------------
 
   moneyDisplay.textContent =
     `$${cloudMoney.toFixed(2)}`;
@@ -505,8 +538,7 @@ function renderRecipes() {
 
 
     const owned =
-      hasEquipmentTierOrHigher(
-        inventory,
+      hasCloudEquipmentTierOrHigher(
         recipe.reward.category,
         recipe.reward.tier
       );
@@ -528,10 +560,9 @@ function renderRecipes() {
               "equipment"
             ) {
               const requirementMet =
-                inventory.equipment.some(
-                  (equipment) =>
-                    equipment.id ===
-                    requirement.equipmentId
+                hasCloudEquipment(
+                  requirement
+                    .equipmentId
                 );
 
 
@@ -588,7 +619,9 @@ function renderRecipes() {
 
 
             const value =
-              progress[key];
+              progress[
+                key
+              ];
 
 
             const complete =
@@ -597,7 +630,18 @@ function renderRecipes() {
                 recipe,
                 requirement,
                 index,
-                inventory
+                {
+                  equipment:
+                    cloudEquipment.map(
+                      (
+                        equipment
+                      ) => ({
+                        id:
+                          equipment
+                            .equipment_id
+                      })
+                    )
+                }
               );
 
 
@@ -655,11 +699,8 @@ function renderRecipes() {
 
 
     const ready =
-      isRecipeReady(
-        craftingState,
-        recipe,
-        player,
-        inventory
+      isCloudRecipeReady(
+        recipe
       );
 
 
@@ -729,7 +770,11 @@ function renderRecipes() {
 
             <button
               class="craft-button"
-              disabled
+              ${
+                ready
+                  ? ""
+                  : "disabled"
+              }
             >
               Craft
             </button>
@@ -745,7 +790,7 @@ function renderRecipes() {
     if (!owned) {
       // -----------------------------------------------------
       // AUTO CRAFT
-      // TEMPORARILY DISABLED
+      // STILL TEMPORARILY DISABLED
       // -----------------------------------------------------
 
       const autoCraftButton =
@@ -758,7 +803,8 @@ function renderRecipes() {
         ?.addEventListener(
           "click",
           () => {
-            setAutoCraft(
+            console.warn(
+              "Auto Craft is temporarily disabled during cloud migration.",
               recipe.id
             );
           }
@@ -766,8 +812,7 @@ function renderRecipes() {
 
 
       // -----------------------------------------------------
-      // CRAFT
-      // TEMPORARILY DISABLED
+      // CLOUD CRAFT
       // -----------------------------------------------------
 
       const craftButton =
@@ -779,10 +824,35 @@ function renderRecipes() {
       craftButton
         ?.addEventListener(
           "click",
-          () => {
-            craftRecipe(
-              recipe
+          async () => {
+            craftButton.disabled =
+              true;
+
+
+            const result =
+              await craftCloudRecipe(
+                recipe.id
+              );
+
+
+            if (!result) {
+              await loadCraftingPageState();
+
+              renderRecipes();
+
+              return;
+            }
+
+
+            console.log(
+              "Cloud craft:",
+              result
             );
+
+
+            await loadCraftingPageState();
+
+            renderRecipes();
           }
         );
 
@@ -822,9 +892,6 @@ function renderRecipes() {
                 }
 
 
-                // Prevent duplicate clicks
-                // while server processes
-                // this deposit.
                 button.disabled =
                   true;
 
@@ -850,8 +917,6 @@ function renderRecipes() {
                 );
 
 
-                // Reload authoritative
-                // crafting state.
                 const loaded =
                   await loadCraftingPageState();
 
