@@ -3,82 +3,139 @@ import {
 } from "./supabase.js";
 
 
+// =========================================================
+// LOAD CLOUD DEBUG STATE
+// =========================================================
+
 export async function loadCloudDebugState() {
-  const [
-    playerResult,
-    equipmentResult,
-    gemsResult
-  ] =
-    await Promise.all([
-      supabase
-        .from("players")
-        .select(`
-          money,
-          inventory_capacity,
-          next_roll_at
-        `)
-        .single(),
+  // -------------------------------------------------------
+  // PLAYER
+  // -------------------------------------------------------
 
-      supabase
-        .from("player_equipment")
-        .select(`
-          id,
-          equipped,
-          luck_bonus,
-          roll_speed_bonus,
-          weight_luck_bonus,
-          weight_multiplier_bonus
-        `),
-
-      supabase
-        .from("inventory_gems")
-        .select(
-          "id",
-          {
-            count: "exact",
-            head: true
-          }
-        )
-    ]);
+  const {
+    data: player,
+    error: playerError
+  } =
+    await supabase
+      .from("players")
+      .select(`
+        money,
+        inventory_capacity,
+        next_roll_at,
+        total_rolls,
+        rarest_gem_name,
+        rarest_gem_rarity
+      `)
+      .single();
 
 
-  // =================================
-  // CHECK ERRORS
-  // =================================
-
-  if (playerResult.error) {
+  if (
+    playerError ||
+    !player
+  ) {
     console.error(
-      "Failed to load cloud player:",
-      playerResult.error
+      "Failed to load cloud player debug state:",
+      playerError
     );
 
     return null;
   }
 
 
-  if (equipmentResult.error) {
+  // -------------------------------------------------------
+  // INVENTORY COUNT
+  // -------------------------------------------------------
+
+  const {
+    count: gemCount,
+    error: gemError
+  } =
+    await supabase
+      .from(
+        "inventory_gems"
+      )
+      .select(
+        "id",
+        {
+          count: "exact",
+          head: true
+        }
+      );
+
+
+  if (gemError) {
     console.error(
-      "Failed to load cloud equipment:",
-      equipmentResult.error
+      "Failed to load cloud gem count:",
+      gemError
     );
 
     return null;
   }
 
 
-  if (gemsResult.error) {
+  // -------------------------------------------------------
+  // EQUIPMENT
+  // -------------------------------------------------------
+
+  const {
+    data: equipment,
+    error: equipmentError
+  } =
+    await supabase
+      .from(
+        "player_equipment"
+      )
+      .select(`
+        equipment_id,
+        equipped,
+        luck_bonus,
+        roll_speed_bonus,
+        weight_luck_bonus,
+        weight_multiplier_bonus
+      `);
+
+
+  if (equipmentError) {
     console.error(
-      "Failed to count cloud gems:",
-      gemsResult.error
+      "Failed to load cloud equipment debug state:",
+      equipmentError
     );
 
     return null;
   }
 
 
-  // =================================
-  // CALCULATE EQUIPMENT STATS
-  // =================================
+  // -------------------------------------------------------
+  // CRAFTING
+  // -------------------------------------------------------
+
+  const {
+    data: crafting,
+    error: craftingError
+  } =
+    await supabase
+      .from(
+        "player_crafting"
+      )
+      .select(
+        "active_auto_craft"
+      )
+      .maybeSingle();
+
+
+  if (craftingError) {
+    console.error(
+      "Failed to load cloud crafting debug state:",
+      craftingError
+    );
+
+    return null;
+  }
+
+
+  // -------------------------------------------------------
+  // CALCULATE STATS
+  // -------------------------------------------------------
 
   let luck =
     1;
@@ -93,32 +150,33 @@ export async function loadCloudDebugState() {
     1;
 
 
-  const equipment =
-    equipmentResult.data ?? [];
-
-
   for (
     const item
-    of equipment
+    of equipment ?? []
   ) {
-    if (!item.equipped) {
+    if (
+      !item.equipped
+    ) {
       continue;
     }
 
 
     luck +=
       Number(
-        item.luck_bonus ?? 0
+        item.luck_bonus ??
+        0
       );
 
     rollSpeed +=
       Number(
-        item.roll_speed_bonus ?? 0
+        item.roll_speed_bonus ??
+        0
       );
 
     weightLuck +=
       Number(
-        item.weight_luck_bonus ?? 0
+        item.weight_luck_bonus ??
+        0
       );
 
     weightMultiplier +=
@@ -129,21 +187,20 @@ export async function loadCloudDebugState() {
   }
 
 
-  // =================================
+  // -------------------------------------------------------
   // COOLDOWN
-  // =================================
+  // -------------------------------------------------------
 
   let cooldownRemaining =
     0;
 
 
   if (
-    playerResult.data.next_roll_at
+    player.next_roll_at
   ) {
     const remainingMs =
       new Date(
-        playerResult.data
-          .next_roll_at
+        player.next_roll_at
       ).getTime() -
       Date.now();
 
@@ -151,14 +208,15 @@ export async function loadCloudDebugState() {
     cooldownRemaining =
       Math.max(
         0,
-        remainingMs / 1000
+        remainingMs /
+        1000
       );
   }
 
 
-  // =================================
-  // RETURN STATE
-  // =================================
+  // -------------------------------------------------------
+  // RETURN
+  // -------------------------------------------------------
 
   return {
     stats: {
@@ -168,23 +226,60 @@ export async function loadCloudDebugState() {
       weightMultiplier
     },
 
+
     player: {
       money:
-        playerResult.data.money,
-
-      inventoryCapacity:
-        playerResult.data
-          .inventory_capacity,
+        Number(
+          player.money ??
+          0
+        ),
 
       gemCount:
-        gemsResult.count ?? 0,
+        gemCount ??
+        0,
+
+      inventoryCapacity:
+        Number(
+          player.inventory_capacity ??
+          15
+        ),
 
       equipmentCount:
-        equipment.length
+        equipment?.length ??
+        0
     },
+
+
+    crafting: {
+      activeAutoCraftRecipeId:
+        crafting
+          ?.active_auto_craft ??
+        null
+    },
+
 
     rolling: {
       cooldownRemaining
+    },
+
+
+    lifetime: {
+      totalRolls:
+        Number(
+          player.total_rolls ??
+          0
+        ),
+
+      rarestGemName:
+        player.rarest_gem_name ??
+        null,
+
+      rarestGemRarity:
+        player.rarest_gem_rarity != null
+          ? Number(
+              player.rarest_gem_rarity
+            )
+          : null
     }
   };
 }
