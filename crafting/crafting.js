@@ -35,6 +35,10 @@ import {
   ensurePlayerAuth
 } from "../src/backend/auth.js";
 
+import {
+  loadCloudPlayerState
+} from "../src/backend/cloudInventory.js";
+
 
 const recipeList =
   document.getElementById(
@@ -69,6 +73,8 @@ let inventory =
 let selectedCategory =
   "pickaxe";
 
+let cloudMoney = 0;
+
 
 // =========================================================
 // LOAD CLOUD CRAFTING STATE
@@ -101,6 +107,20 @@ async function loadCraftingPageState() {
 
   craftingState =
     cloudState;
+
+  const cloudPlayerState =
+    await loadCloudPlayerState();
+  
+  if (!cloudPlayerState) {
+    console.error(
+      "Could not load cloud player state."
+    );
+  
+    return false;
+  }
+  
+  cloudMoney =
+    cloudPlayerState.money
 
   return true;
 }
@@ -462,7 +482,7 @@ function renderRecipes() {
   // ---------------------------------------------------------
 
   moneyDisplay.textContent =
-    `$${player.money.toFixed(2)}`;
+    `$${cloudMoney.toFixed(2)}`;
 
 
   const visibleRecipes =
@@ -624,7 +644,7 @@ function renderRecipes() {
 
 
     const moneyComplete =
-      player.money >=
+      cloudMoney >=
       recipe.moneyCost;
 
 
