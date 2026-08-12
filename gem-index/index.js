@@ -1,65 +1,201 @@
 import gems from "../src/data/gems.js";
 
 import {
-  createPlayer,
-  loadPlayer
-} from "../src/logic/player.js";
+  ensurePlayerAuth
+} from "../src/backend/auth.js";
+
+import {
+  supabase
+} from "../src/backend/supabase.js";
+
 
 const gemList =
-  document.getElementById("gemList");
+  document.getElementById(
+    "gemList"
+  );
 
 const discoveryCount =
   document.getElementById(
     "discoveryCount"
   );
 
-function renderIndex() {
-  const player =
-    loadPlayer() ??
-    createPlayer();
+
+// =========================================================
+// LOAD CLOUD GEM INDEX
+// =========================================================
+
+async function loadCloudGemIndex() {
+  const {
+    data,
+    error
+  } =
+    await supabase
+      .from(
+        "gem_index"
+      )
+      .select(`
+        gem_name,
+        total_rolled,
+        heaviest_weight
+      `);
+
+
+  if (error) {
+    console.error(
+      "Failed to load cloud Gem Index:",
+      error
+    );
+
+    return null;
+  }
+
+
+  const indexByName =
+    {};
+
+
+  for (
+    const entry
+    of data ?? []
+  ) {
+    indexByName[
+      entry.gem_name
+    ] = {
+      totalRolled:
+        Number(
+          entry.total_rolled ??
+          0
+        ),
+
+      heaviestWeight:
+        Number(
+          entry.heaviest_weight ??
+          0
+        )
+    };
+  }
+
+
+  return indexByName;
+}
+
+
+// =========================================================
+// RENDER GEM INDEX
+// =========================================================
+
+async function renderIndex() {
+  // =================================
+  // AUTH
+  // =================================
+
+  const user =
+    await ensurePlayerAuth();
+
+
+  if (!user) {
+    discoveryCount.textContent =
+      "Could not authenticate player.";
+
+    gemList.innerHTML =
+      "";
+
+    return;
+  }
+
+
+  // =================================
+  // LOAD CLOUD INDEX
+  // =================================
 
   const gemIndex =
-    player.gemIndex ?? {};
+    await loadCloudGemIndex();
+
+
+  if (!gemIndex) {
+    discoveryCount.textContent =
+      "Could not load Gem Index.";
+
+    gemList.innerHTML =
+      "";
+
+    return;
+  }
+
+
+  // =================================
+  // DISCOVERY COUNT
+  // =================================
 
   const discovered =
     gems.filter(
       (gem) =>
-        gemIndex[gem.name]
-          ?.discovered
+        Boolean(
+          gemIndex[
+            gem.name
+          ]
+        )
     ).length;
+
 
   discoveryCount.textContent =
     `${discovered} / ${gems.length} discovered`;
 
-  gemList.innerHTML = "";
 
-  for (const gem of gems) {
+  // =================================
+  // RENDER CARDS
+  // =================================
+
+  gemList.innerHTML =
+    "";
+
+
+  for (
+    const gem
+    of gems
+  ) {
     const entry =
-      gemIndex[gem.name];
+      gemIndex[
+        gem.name
+      ];
+
 
     const isDiscovered =
       Boolean(
-        entry?.discovered
+        entry
       );
+
 
     const card =
       document.createElement(
         "div"
       );
 
+
     card.className =
       "gem-card";
 
-    if (!isDiscovered) {
+
+    // =================================
+    // UNDISCOVERED GEM
+    // =================================
+
+    if (
+      !isDiscovered
+    ) {
       card.classList.add(
         "undiscovered"
       );
 
+
       card.innerHTML = `
-        <h2>???</h2>
+        <h2>
+          ???
+        </h2>
 
         <p>
-          Rarity: ???
+          Rarity:
+          ???
         </p>
 
         <p>
@@ -67,16 +203,24 @@ function renderIndex() {
         </p>
       `;
 
+
       gemList.appendChild(
         card
       );
 
+
       continue;
     }
+
+
+    // =================================
+    // DISCOVERED GEM
+    // =================================
 
     const baseValue =
       gem.baseWeight *
       gem.valuePerGram;
+
 
     card.innerHTML = `
       <h2>
@@ -105,14 +249,17 @@ function renderIndex() {
       </p>
 
       <p class="gem-description">
-        ${gem.description ?? "No description available."}
+        ${
+          gem.description ??
+          "No description available."
+        }
       </p>
 
       <hr>
 
       <p>
         Total Rolled:
-        ${entry.totalRolled}
+        ${entry.totalRolled.toLocaleString()}
       </p>
 
       <p>
@@ -121,15 +268,22 @@ function renderIndex() {
       </p>
     `;
 
+
     gemList.appendChild(
       card
     );
   }
 }
 
+
+// =========================================================
+// PAGE EVENTS
+// =========================================================
+
 window.addEventListener(
   "pageshow",
   renderIndex
 );
+
 
 renderIndex();
