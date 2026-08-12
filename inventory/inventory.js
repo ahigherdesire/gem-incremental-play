@@ -263,7 +263,9 @@ function renderGems() {
           }
         </p>
 
-        <button class="lock-button">
+        <button
+          class="lock-button"
+        >
           ${
             gem.locked
               ? "🔓 Unlock"
@@ -271,48 +273,94 @@ function renderGems() {
           }
         </button>
 
-        <button disabled>
+        <button
+          class="sell-button"
+          ${gem.locked ? "disabled" : ""}
+        >
           Sell
         </button>
       `;
 
-      card
-        .querySelector(
+
+      // =================================
+      // LOCK / UNLOCK
+      // =================================
+
+      const lockButton =
+        card.querySelector(
           ".lock-button"
-        )
-        .addEventListener(
-          "click",
-          async () => {
-            const button =
-              card.querySelector(
-                ".lock-button"
-              );
-      
-            button.disabled =
-              true;
-      
-      
-            const result =
-              await toggleCloudGemLock(
-                gem.id
-              );
-      
-      
-            if (!result) {
-              button.disabled =
-                false;
-      
-              return;
-            }
-      
-      
-            // Reload inventory
-            // from Supabase so the UI
-            // reflects the server state.
-      
-            await refreshInventoryPage();
-          }
         );
+
+      lockButton.addEventListener(
+        "click",
+        async () => {
+          lockButton.disabled =
+            true;
+
+          const result =
+            await toggleCloudGemLock(
+              gem.id
+            );
+
+          if (!result) {
+            lockButton.disabled =
+              false;
+
+            return;
+          }
+
+          await refreshInventoryPage();
+        }
+      );
+
+
+      // =================================
+      // SELL GEM
+      // =================================
+
+      const sellButton =
+        card.querySelector(
+          ".sell-button"
+        );
+
+      sellButton.addEventListener(
+        "click",
+        async () => {
+          // Extra client-side guard.
+          // The server also checks this.
+          if (gem.locked) {
+            return;
+          }
+
+          sellButton.disabled =
+            true;
+
+          lockButton.disabled =
+            true;
+
+          const result =
+            await sellCloudGem(
+              gem.id
+            );
+
+          if (!result) {
+            sellButton.disabled =
+              false;
+
+            lockButton.disabled =
+              false;
+
+            return;
+          }
+
+          await refreshInventoryPage();
+        }
+      );
+
+
+      // =================================
+      // ADD CARD
+      // =================================
 
       inventoryList.appendChild(
         card
@@ -320,7 +368,6 @@ function renderGems() {
     }
   );
 }
-
 
 // =========================================================
 // RENDER EQUIPMENT
