@@ -1,7 +1,6 @@
 import {
   loadInventory,
-  loadCraftingState,
-  loadCooldownEnd
+  loadCraftingState
 } from "../src/logic/storage.js";
 
 import {
@@ -18,108 +17,237 @@ import {
 } from "../src/logic/player.js";
 
 import {
-  getPlayerStats
-} from "../src/logic/playerStats.js";
+  ensurePlayerAuth
+} from "../src/backend/auth.js";
 
 import {
   loadCloudDebugState
 } from "../src/backend/cloudDebug.js";
 
-import {
-  ensurePlayerAuth
-} from "../src/backend/auth.js";
 
 const debugStats =
-  document.getElementById("debugStats");
+  document.getElementById(
+    "debugStats"
+  );
+
 
 async function renderDebug() {
+  // =================================
+  // AUTH
+  // =================================
+
   const user =
     await ensurePlayerAuth();
 
-
   if (!user) {
-    console.error(
-      "Could not authenticate player."
-    );
+    debugStats.innerHTML = `
+      <section class="debug-card">
+        <h2>Error</h2>
+        <p>
+          Could not authenticate player.
+        </p>
+      </section>
+    `;
 
     return;
   }
 
+
+  // =================================
+  // LOAD CLOUD STATE
+  // =================================
 
   const cloudState =
     await loadCloudDebugState();
 
-
   if (!cloudState) {
-    console.error(
-      "Could not load cloud debug state."
-    );
+    debugStats.innerHTML = `
+      <section class="debug-card">
+        <h2>Error</h2>
+        <p>
+          Could not load cloud debug state.
+        </p>
+      </section>
+    `;
 
     return;
   }
 
 
   // =================================
-  // CLOUD PLAYER STATS
+  // LOAD REMAINING LOCAL STATE
   // =================================
 
-  luckDisplay.textContent =
-    `Luck: ${cloudState.stats.luck.toFixed(2)}x`;
+  const inventory =
+    loadInventory() ??
+    createInventory();
 
-  rollSpeedDisplay.textContent =
-    `Roll Speed: ${cloudState.stats.rollSpeed.toFixed(2)}x`;
+  const craftingState =
+    loadCraftingState() ??
+    createCraftingState();
 
-  weightLuckDisplay.textContent =
-    `Weight Luck: ${cloudState.stats.weightLuck.toFixed(2)}x`;
-
-  weightMultiplierDisplay.textContent =
-    `Weight Multiplier: ${cloudState.stats.weightMultiplier.toFixed(2)}x`;
-
-
-  // =================================
-  // CLOUD PLAYER DATA
-  // =================================
-
-  moneyDisplay.textContent =
-    `Money: $${cloudState.player.money.toFixed(2)}`;
-
-  gemsDisplay.textContent =
-    `Gems: ` +
-    `${cloudState.player.gemCount} / ` +
-    `${cloudState.player.inventoryCapacity}`;
-
-  equipmentDisplay.textContent =
-    `Equipment Owned: ` +
-    `${cloudState.player.equipmentCount}`;
+  const player =
+    loadPlayer() ??
+    createPlayer();
 
 
   // =================================
-  // CLOUD COOLDOWN
+  // LOCAL CRAFTING VALUE
   // =================================
 
-  cooldownDisplay.textContent =
-    `Cooldown Remaining: ` +
-    `${cloudState.rolling.cooldownRemaining.toFixed(1)}s`;
+  const activeAutoCraft =
+    craftingState.activeAutoCraft ??
+    "None";
 
 
   // =================================
-  // KEEP EXISTING LOCAL CODE
+  // LOCAL LIFETIME STATS
   // =================================
 
-  // Active Auto Craft
-  // Total Rolls
-  // Rarest Gem
-  //
-  // Leave these using the existing
-  // localStorage logic for now.
+  const totalRolls =
+    player.totalRolls ??
+    0;
+
+  let rarestGemText =
+    "None";
+
+  if (
+    player.rarestGem
+  ) {
+    const rarestGem =
+      player.rarestGem;
+
+    if (
+      typeof rarestGem ===
+      "string"
+    ) {
+      rarestGemText =
+        rarestGem;
+    } else {
+      const name =
+        rarestGem.name ??
+        "Unknown";
+
+      const rarity =
+        rarestGem.rarity;
+
+      rarestGemText =
+        rarity
+          ? `${name} (1 in ${Number(rarity).toLocaleString()})`
+          : name;
+    }
+  }
+
+
+  // =================================
+  // RENDER PAGE
+  // =================================
+
+  debugStats.innerHTML = `
+    <section class="debug-card">
+      <h2>
+        Player Stats
+      </h2>
+
+      <p>
+        Luck:
+        ${cloudState.stats.luck.toFixed(2)}x
+      </p>
+
+      <p>
+        Roll Speed:
+        ${cloudState.stats.rollSpeed.toFixed(2)}x
+      </p>
+
+      <p>
+        Weight Luck:
+        ${cloudState.stats.weightLuck.toFixed(2)}x
+      </p>
+
+      <p>
+        Weight Multiplier:
+        ${cloudState.stats.weightMultiplier.toFixed(2)}x
+      </p>
+    </section>
+
+
+    <section class="debug-card">
+      <h2>
+        Player
+      </h2>
+
+      <p>
+        Money:
+        $${cloudState.player.money.toFixed(2)}
+      </p>
+
+      <p>
+        Gems:
+        ${cloudState.player.gemCount}
+        /
+        ${cloudState.player.inventoryCapacity}
+      </p>
+
+      <p>
+        Equipment Owned:
+        ${cloudState.player.equipmentCount}
+      </p>
+    </section>
+
+
+    <section class="debug-card">
+      <h2>
+        Crafting
+      </h2>
+
+      <p>
+        Active Auto Craft:
+        ${activeAutoCraft}
+      </p>
+    </section>
+
+
+    <section class="debug-card">
+      <h2>
+        Rolling
+      </h2>
+
+      <p>
+        Cooldown Remaining:
+        ${cloudState.rolling.cooldownRemaining.toFixed(1)}s
+      </p>
+    </section>
+
+
+    <section class="debug-card">
+      <h2>
+        Lifetime Stats
+      </h2>
+
+      <p>
+        Total Rolls:
+        ${totalRolls}
+      </p>
+
+      <p>
+        Rarest Gem:
+        ${rarestGemText}
+      </p>
+    </section>
+  `;
 }
+
+
+renderDebug();
+
 
 window.addEventListener(
   "pageshow",
   renderDebug
 );
 
+
 setInterval(
   renderDebug,
-  100
+  500
 );
