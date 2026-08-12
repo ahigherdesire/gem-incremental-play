@@ -759,7 +759,6 @@ function renderRecipes() {
 
             <button
               class="auto-craft-button"
-              disabled
             >
               Auto Craft:
               ${
