@@ -132,3 +132,35 @@ export async function craftCloudRecipe(
 
   return data;
 }
+
+export async function setCloudAutoCraft(
+  recipeId
+) {
+  const {
+    data,
+    error
+  } =
+    await supabase
+      .functions
+      .invoke(
+        "set-auto-craft",
+        {
+          body: {
+            recipeId
+          }
+        }
+      );
+
+
+  if (error) {
+    console.error(
+      "Failed to set cloud Auto Craft:",
+      error
+    );
+
+    return null;
+  }
+
+
+  return data;
+}
