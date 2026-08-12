@@ -44,7 +44,7 @@ async function loadServerRollState() {
           inventory_capacity,
           next_roll_at
         `)
-        .single(),
+        .maybeSingle(),
 
       supabase
         .from("inventory_gems")
@@ -78,10 +78,33 @@ async function loadServerRollState() {
   }
 
 
+  // A completely fresh anonymous user may not
+  // have a row in public.players yet.
+  //
+  // Treat that as the default starting state
+  // instead of an error.
+  if (!playerResult.data) {
+    return {
+      capacity:
+        15,
+
+      nextRollAt:
+        null,
+
+      inventoryCount:
+        inventoryResult.count ??
+        0
+    };
+  }
+
+
   return {
     capacity:
-      playerResult.data
-        .inventory_capacity,
+      Number(
+        playerResult.data
+          .inventory_capacity ??
+        15
+      ),
 
     nextRollAt:
       playerResult.data
@@ -489,6 +512,8 @@ async function performServerRoll() {
 rollButton.addEventListener(
   "click",
   async (event) => {
+    // This is only normal UI behaviour.
+    // The server remains authoritative.
     if (!event.isTrusted) {
       return;
     }
@@ -584,11 +609,10 @@ async function startGame() {
 window.addEventListener(
   "pageshow",
   async (event) => {
-    // Initial startup is already handled
-    // by startGame().
+    // Initial startup is already handled by startGame().
     //
-    // pageshow is mainly useful when returning
-    // through browser back/forward cache.
+    // Only restore here when returning through the
+    // browser's back/forward cache.
     if (
       event.persisted
     ) {
