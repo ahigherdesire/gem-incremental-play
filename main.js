@@ -37,7 +37,7 @@ let cooldownTimer =
 // LOAD SERVER ROLL STATE
 // =========================================================
 
-async function loadServerRollState() {
+async function loadServerRollState(userId) {
   const [
     playerResult,
     inventoryResult
@@ -49,6 +49,10 @@ async function loadServerRollState() {
           inventory_capacity,
           next_roll_at
         `)
+        .eq(
+          "id",
+          userId
+        )
         .maybeSingle(),
 
       supabase
@@ -124,8 +128,17 @@ async function loadServerRollState() {
 // =========================================================
 
 async function showReadyButton() {
-  const state =
-    await loadServerRollState();
+  const {
+  data: {
+    user
+  }
+} =
+  await supabase.auth.getUser();
+
+const state =
+  await loadServerRollState(
+    user?.id
+  );
 
 
   if (!state) {
@@ -226,8 +239,17 @@ function startCooldown(
 // =========================================================
 
 async function restoreGameState() {
-  const state =
-    await loadServerRollState();
+  const {
+  data: {
+    user
+  }
+} =
+  await supabase.auth.getUser();
+
+const state =
+  await loadServerRollState(
+    user?.id
+  );
 
 
   if (!state) {
