@@ -1,20 +1,5 @@
-import {
-  loadInventory,
-  loadCraftingState
-} from "../src/logic/storage.js";
-
-import {
-  createInventory
-} from "../src/logic/inventory.js";
-
-import {
-  createCraftingState
-} from "../src/logic/crafting.js";
-
-import {
-  createPlayer,
-  loadPlayer
-} from "../src/logic/player.js";
+import recipes
+  from "../src/data/recipes.js";
 
 import {
   ensurePlayerAuth
@@ -31,6 +16,10 @@ const debugStats =
   );
 
 
+// =========================================================
+// RENDER DEBUG PAGE
+// =========================================================
+
 async function renderDebug() {
   // =================================
   // AUTH
@@ -39,10 +28,14 @@ async function renderDebug() {
   const user =
     await ensurePlayerAuth();
 
+
   if (!user) {
     debugStats.innerHTML = `
       <section class="debug-card">
-        <h2>Error</h2>
+        <h2>
+          Error
+        </h2>
+
         <p>
           Could not authenticate player.
         </p>
@@ -60,10 +53,14 @@ async function renderDebug() {
   const cloudState =
     await loadCloudDebugState();
 
+
   if (!cloudState) {
     debugStats.innerHTML = `
       <section class="debug-card">
-        <h2>Error</h2>
+        <h2>
+          Error
+        </h2>
+
         <p>
           Could not load cloud debug state.
         </p>
@@ -75,67 +72,61 @@ async function renderDebug() {
 
 
   // =================================
-  // LOAD REMAINING LOCAL STATE
+  // AUTO CRAFT DISPLAY
   // =================================
 
-  const inventory =
-    loadInventory() ??
-    createInventory();
-
-  const craftingState =
-    loadCraftingState() ??
-    createCraftingState();
-
-  const player =
-    loadPlayer() ??
-    createPlayer();
+  const activeAutoCraftId =
+    cloudState
+      .crafting
+      .activeAutoCraftRecipeId;
 
 
-  // =================================
-  // LOCAL CRAFTING VALUE
-  // =================================
+  const activeAutoCraftRecipe =
+    activeAutoCraftId
+      ? recipes.find(
+          (recipe) =>
+            recipe.id ===
+            activeAutoCraftId
+        )
+      : null;
 
-  const activeAutoCraft =
-    craftingState.activeAutoCraft ??
+
+  const activeAutoCraftText =
+    activeAutoCraftRecipe
+      ?.name ??
+    activeAutoCraftId ??
     "None";
 
 
   // =================================
-  // LOCAL LIFETIME STATS
+  // RAREST GEM DISPLAY
   // =================================
 
-  const totalRolls =
-    player.stats?.totalRolls ??
-    0;
-  
   let rarestGemText =
     "None";
-  
+
+
   if (
-    player.stats?.rarestGem
+    cloudState
+      .lifetime
+      .rarestGemName
   ) {
-    const rarestGem =
-      player.stats.rarestGem;
+    const name =
+      cloudState
+        .lifetime
+        .rarestGemName;
 
-    if (
-      typeof rarestGem ===
-      "string"
-    ) {
-      rarestGemText =
-        rarestGem;
-    } else {
-      const name =
-        rarestGem.name ??
-        "Unknown";
 
-      const rarity =
-        rarestGem.rarity;
+    const rarity =
+      cloudState
+        .lifetime
+        .rarestGemRarity;
 
-      rarestGemText =
-        rarity
-          ? `${name} (1 in ${Number(rarity).toLocaleString()})`
-          : name;
-    }
+
+    rarestGemText =
+      rarity
+        ? `${name} (1 in ${rarity.toLocaleString()})`
+        : name;
   }
 
 
@@ -202,7 +193,7 @@ async function renderDebug() {
 
       <p>
         Active Auto Craft:
-        ${activeAutoCraft}
+        ${activeAutoCraftText}
       </p>
     </section>
 
@@ -226,7 +217,7 @@ async function renderDebug() {
 
       <p>
         Total Rolls:
-        ${totalRolls}
+        ${cloudState.lifetime.totalRolls.toLocaleString()}
       </p>
 
       <p>
@@ -238,14 +229,26 @@ async function renderDebug() {
 }
 
 
+// =========================================================
+// INITIAL LOAD
+// =========================================================
+
 renderDebug();
 
+
+// =========================================================
+// REFRESH WHEN RETURNING TO PAGE
+// =========================================================
 
 window.addEventListener(
   "pageshow",
   renderDebug
 );
 
+
+// =========================================================
+// LIVE DEBUG REFRESH
+// =========================================================
 
 setInterval(
   renderDebug,
