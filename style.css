@@ -29,3 +29,118 @@ h1 {
   border: 1px solid #444;
   border-radius: 12px;
 }
+
+#legacyMigrationOverlay {
+  position: fixed;
+  inset: 0;
+
+  z-index: 9999;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 24px;
+
+  background:
+    rgba(0, 0, 0, 0.72);
+}
+
+
+.legacy-migration-modal {
+  width: min(
+    460px,
+    100%
+  );
+
+  padding: 28px;
+
+  border:
+    1px solid #555;
+
+  border-radius:
+    16px;
+
+  background:
+    #11161c;
+
+  box-shadow:
+    0 20px 60px
+    rgba(0, 0, 0, 0.4);
+}
+
+
+.legacy-migration-modal h2 {
+  margin-top: 0;
+}
+
+
+.legacy-migration-summary {
+  margin:
+    20px 0;
+
+  padding:
+    14px 18px;
+
+  border-radius:
+    10px;
+
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.05
+    );
+}
+
+
+.legacy-migration-summary p {
+  margin:
+    6px 0;
+}
+
+
+.legacy-migration-note {
+  opacity:
+    0.8;
+}
+
+
+.legacy-migration-actions {
+  display:
+    flex;
+
+  gap:
+    12px;
+
+  margin-top:
+    20px;
+
+  flex-wrap:
+    wrap;
+}
+
+
+.legacy-migration-actions button {
+  padding:
+    10px 16px;
+
+  cursor:
+    pointer;
+}
+
+
+.legacy-migration-actions button:disabled {
+  cursor:
+    not-allowed;
+
+  opacity:
+    0.6;
+}
+
+
+.legacy-migration-status {
+  margin-top:
+    16px;
+}

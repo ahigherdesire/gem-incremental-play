@@ -1,124 +1,215 @@
-import { rollResult } from "./src/logic/rollResult.js";
+import recipes
+  from "./src/data/recipes.js";
 
 import {
-  createInventory,
-  addGemToInventory,
-  isInventoryFull
-} from "./src/logic/inventory.js";
-
-import recipes from "./src/data/recipes.js";
+  ensurePlayerAuth
+} from "./src/backend/auth.js";
 
 import {
-  createCraftingState,
-  tryAutoDeposit
-} from "./src/logic/crafting.js";
+  supabase
+} from "./src/backend/supabase.js";
 
 import {
-  getPlayerStats
-} from "./src/logic/playerStats.js";
+  runLegacyMigrationGate
+} from "./src/backend/legacyMigration.js";
 
-import {
-  createPlayer,
-  loadPlayer,
-  recordRoll
-} from "./src/logic/player.js";
-
-import {
-  saveInventory,
-  loadInventory,
-  saveCooldownEnd,
-  loadCooldownEnd,
-  clearCooldownEnd,
-  saveCraftingState,
-  loadCraftingState
-} from "./src/logic/storage.js";
 
 const rollButton =
-  document.getElementById("rollButton");
+  document.getElementById(
+    "rollButton"
+  );
 
 const result =
-  document.getElementById("result");
+  document.getElementById(
+    "result"
+  );
 
-let inventory =
-  loadInventory() ??
-  createInventory();
+let cooldownTimer =
+  null;
 
-let craftingState =
-  loadCraftingState() ??
-  createCraftingState();
 
-let player =
-  loadPlayer() ??
-  createPlayer();
+// =========================================================
+// LOAD SERVER ROLL STATE
+// =========================================================
 
-let cooldownTimer = null;
+async function loadServerRollState() {
+  const [
+    playerResult,
+    inventoryResult
+  ] =
+    await Promise.all([
+      supabase
+        .from("players")
+        .select(`
+          inventory_capacity,
+          next_roll_at
+        `)
+        .maybeSingle(),
 
-function getCooldownMs() {
-  const stats =
-    getPlayerStats(inventory);
+      supabase
+        .from("inventory_gems")
+        .select(
+          "id",
+          {
+            count: "exact",
+            head: true
+          }
+        )
+    ]);
 
-  const baseCooldownSeconds = 3;
 
-  return (
-    baseCooldownSeconds /
-    stats.rollSpeed
-  ) * 1000;
+  if (playerResult.error) {
+    console.error(
+      "Failed to load player roll state:",
+      playerResult.error
+    );
+
+    return null;
+  }
+
+
+  if (inventoryResult.error) {
+    console.error(
+      "Failed to load inventory count:",
+      inventoryResult.error
+    );
+
+    return null;
+  }
+
+
+  // A completely fresh anonymous user may not
+  // have a row in public.players yet.
+  //
+  // Treat that as the default starting state
+  // instead of an error.
+  if (!playerResult.data) {
+    return {
+      capacity:
+        15,
+
+      nextRollAt:
+        null,
+
+      inventoryCount:
+        inventoryResult.count ??
+        0
+    };
+  }
+
+
+  return {
+    capacity:
+      Number(
+        playerResult.data
+          .inventory_capacity ??
+        15
+      ),
+
+    nextRollAt:
+      playerResult.data
+        .next_roll_at,
+
+    inventoryCount:
+      inventoryResult.count ??
+      0
+  };
 }
 
-function refreshInventory() {
-  inventory =
-    loadInventory() ??
-    createInventory();
-}
 
-function refreshCraftingState() {
-  craftingState =
-    loadCraftingState() ??
-    createCraftingState();
-}
+// =========================================================
+// READY BUTTON
+// =========================================================
 
-function showReadyButton() {
-  refreshInventory();
+async function showReadyButton() {
+  const state =
+    await loadServerRollState();
 
-  if (isInventoryFull(inventory)) {
-    rollButton.disabled = true;
+
+  if (!state) {
+    rollButton.disabled =
+      true;
+
+    rollButton.textContent =
+      "ERROR";
+
+    return;
+  }
+
+
+  if (
+    state.inventoryCount >=
+    state.capacity
+  ) {
+    rollButton.disabled =
+      true;
+
     rollButton.textContent =
       "INVENTORY FULL";
-  } else {
-    rollButton.disabled = false;
-    rollButton.textContent =
-      "ROLL";
+
+    return;
   }
+
+
+  rollButton.disabled =
+    false;
+
+  rollButton.textContent =
+    "ROLL";
 }
 
-function startCooldown(cooldownEnd) {
+
+// =========================================================
+// COOLDOWN DISPLAY
+// =========================================================
+
+function startCooldown(
+  cooldownEnd
+) {
   if (cooldownTimer) {
-    clearInterval(cooldownTimer);
+    clearInterval(
+      cooldownTimer
+    );
   }
 
-  rollButton.disabled = true;
+
+  rollButton.disabled =
+    true;
+
 
   function updateCooldown() {
     const remaining =
-      cooldownEnd - Date.now();
+      cooldownEnd -
+      Date.now();
 
-    if (remaining <= 0) {
-      clearInterval(cooldownTimer);
 
-      cooldownTimer = null;
+    if (
+      remaining <= 0
+    ) {
+      clearInterval(
+        cooldownTimer
+      );
 
-      clearCooldownEnd();
+      cooldownTimer =
+        null;
+
 
       showReadyButton();
 
       return;
     }
 
+
     rollButton.textContent =
-      `ROLL (${(remaining / 1000).toFixed(1)}s)`;
+      `ROLL (${(
+        remaining /
+        1000
+      ).toFixed(1)}s)`;
   }
 
+
   updateCooldown();
+
 
   cooldownTimer =
     setInterval(
@@ -127,159 +218,412 @@ function startCooldown(cooldownEnd) {
     );
 }
 
-function restoreGameState() {
-  refreshInventory();
-  refreshCraftingState();
 
-  const cooldownEnd =
-    loadCooldownEnd();
+// =========================================================
+// RESTORE SERVER STATE
+// =========================================================
+
+async function restoreGameState() {
+  const state =
+    await loadServerRollState();
+
+
+  if (!state) {
+    rollButton.disabled =
+      true;
+
+    rollButton.textContent =
+      "ERROR";
+
+    return;
+  }
+
 
   if (
-    cooldownEnd &&
-    cooldownEnd > Date.now()
+    state.nextRollAt
   ) {
-    startCooldown(cooldownEnd);
+    const cooldownEnd =
+      new Date(
+        state.nextRollAt
+      ).getTime();
+
+
+    if (
+      cooldownEnd >
+      Date.now()
+    ) {
+      startCooldown(
+        cooldownEnd
+      );
+
+      return;
+    }
+  }
+
+
+  await showReadyButton();
+}
+
+
+// =========================================================
+// SERVER ROLL
+// =========================================================
+
+async function performServerRoll() {
+  rollButton.disabled =
+    true;
+
+  rollButton.textContent =
+    "ROLLING...";
+
+
+  const {
+    data,
+    error
+  } =
+    await supabase
+      .functions
+      .invoke(
+        "roll"
+      );
+
+
+  // =======================================================
+  // HANDLE SERVER ERROR
+  // =======================================================
+
+  if (error) {
+    console.error(
+      "Server roll failed:",
+      error
+    );
+
+
+    if (
+      error.name ===
+      "FunctionsHttpError"
+    ) {
+      try {
+        const details =
+          await error.context
+            .json();
+
+
+        console.error(
+          "Server response:",
+          details
+        );
+
+
+        // ---------------------------------
+        // COOLDOWN
+        // ---------------------------------
+
+        if (
+          details.error ===
+          "cooldown"
+        ) {
+          if (
+            details.nextRollAt
+          ) {
+            startCooldown(
+              new Date(
+                details.nextRollAt
+              ).getTime()
+            );
+          }
+
+          return;
+        }
+
+
+        // ---------------------------------
+        // INVENTORY FULL
+        // ---------------------------------
+
+        if (
+          details.error ===
+          "inventory_full"
+        ) {
+          rollButton.disabled =
+            true;
+
+          rollButton.textContent =
+            "INVENTORY FULL";
+
+          return;
+        }
+      } catch (
+        parseError
+      ) {
+        console.error(
+          "Could not read server error:",
+          parseError
+        );
+      }
+    }
+
+
+    rollButton.disabled =
+      false;
+
+    rollButton.textContent =
+      "ROLL";
+
+    return;
+  }
+
+
+  if (!data) {
+    console.error(
+      "Server returned no roll."
+    );
+
+    await showReadyButton();
+
+    return;
+  }
+
+
+  // =======================================================
+  // NORMALIZE SERVER RESULT
+  // =======================================================
+
+  const rolled = {
+    gem: {
+      name:
+        data.gem.name,
+
+      rarity:
+        data.gem.rarity,
+
+      baseWeight:
+        data.gem.baseWeight,
+
+      valuePerGram:
+        data.gem.valuePerGram
+    },
+
+    weightMultiplier:
+      data.weightMultiplier,
+
+    rolledWeight:
+      data.rolledWeight,
+
+    finalWeight:
+      data.finalWeight,
+
+    value:
+      data.value
+  };
+
+
+  // =======================================================
+  // DISPLAY RESULT
+  // =======================================================
+
+  const autoDeposited =
+    data.autoCraft?.deposited ===
+    true;
+
+
+  const autoCraftRecipe =
+    autoDeposited
+      ? recipes.find(
+          (recipe) =>
+            recipe.id ===
+            data.autoCraft.recipeId
+        )
+      : null;
+
+
+  const autoCraftName =
+    autoCraftRecipe?.name ??
+    data.autoCraft?.recipeId ??
+    "crafting";
+
+
+  result.innerHTML = `
+    <h2>
+      ${rolled.gem.name}
+    </h2>
+
+    <p>
+      Rarity:
+      1 in
+      ${rolled.gem.rarity.toLocaleString()}
+    </p>
+
+    <p>
+      Weight:
+      ${rolled.finalWeight.toFixed(2)}g
+      (${rolled.weightMultiplier.toFixed(3)}x)
+    </p>
+
+    <p>
+      Value:
+      $${rolled.value.toFixed(2)}
+    </p>
+
+    ${
+      autoDeposited
+        ? `
+          <p>
+            Auto-deposited into
+            <strong>${autoCraftName}</strong>.
+          </p>
+        `
+        : `
+          <p>
+            Inventory:
+            ${data.inventory.count}
+            /
+            ${data.inventory.capacity}
+          </p>
+        `
+    }
+  `;
+
+
+  // =======================================================
+  // SERVER COOLDOWN
+  // =======================================================
+
+  if (
+    data.cooldown
+      ?.nextRollAt
+  ) {
+    startCooldown(
+      new Date(
+        data.cooldown
+          .nextRollAt
+      ).getTime()
+    );
   } else {
-    clearCooldownEnd();
-    showReadyButton();
+    await showReadyButton();
   }
 }
 
-  rollButton.addEventListener(
-    "click",
-    (event) => {
-      if (!event.isTrusted) {
-        return;
-      }
-    refreshInventory();
-    refreshCraftingState();
 
-    if (isInventoryFull(inventory)) {
-      showReadyButton();
+// =========================================================
+// ROLL BUTTON
+// =========================================================
+
+rollButton.addEventListener(
+  "click",
+  async (event) => {
+    // This is only normal UI behaviour.
+    // The server remains authoritative.
+    if (!event.isTrusted) {
       return;
     }
 
-    const cooldownEnd =
-      loadCooldownEnd();
 
-    if (
-      cooldownEnd &&
-      cooldownEnd > Date.now()
-    ) {
-      startCooldown(cooldownEnd);
-      return;
-    }
-
-    const stats =
-      getPlayerStats(inventory);
-
-    const rolled =
-      rollResult(
-        stats.luck,
-        stats.weightLuck,
-        stats.weightMultiplier
-      );
-      recordRoll(
-        player,
-        rolled
-      );
-
-    let autoDeposited = false;
-
-    if (
-      craftingState.activeAutoCraftRecipeId
-    ) {
-      const activeRecipe =
-        recipes.find(
-          (recipe) =>
-            recipe.id ===
-            craftingState
-              .activeAutoCraftRecipeId
-        );
-
-      if (activeRecipe) {
-        autoDeposited =
-          tryAutoDeposit(
-            craftingState,
-            activeRecipe,
-            rolled
-          );
-
-        if (autoDeposited) {
-          saveCraftingState(
-            craftingState
-          );
-        }
-      }
-    }
-
-    if (!autoDeposited) {
-      const added =
-        addGemToInventory(
-          inventory,
-          rolled
-        );
-
-      if (!added) {
-        showReadyButton();
-        return;
-      }
-
-      saveInventory(inventory);
-    }
-
-    result.innerHTML = `
-      <h2>${rolled.gem.name}</h2>
-
-      <p>
-        Rarity:
-        1 in ${rolled.gem.rarity.toLocaleString()}
-      </p>
-
-      <p>
-        Weight:
-        ${rolled.finalWeight.toFixed(2)}g
-        (${rolled.weightMultiplier.toFixed(3)}x)
-      </p>
-
-      <p>
-        Value:
-        $${rolled.value.toFixed(2)}
-      </p>
-
-      ${
-        autoDeposited
-          ? `
-            <p>
-              Auto-deposited into crafting.
-            </p>
-          `
-          : `
-            <p>
-              Inventory:
-              ${inventory.gems.length}/${inventory.capacity}
-            </p>
-          `
-      }
-    `;
-
-    const newCooldownEnd =
-      Date.now() +
-      getCooldownMs();
-
-    saveCooldownEnd(
-      newCooldownEnd
-    );
-
-    startCooldown(
-      newCooldownEnd
-    );
+    await performServerRoll();
   }
 );
 
+
+// =========================================================
+// START GAME
+// =========================================================
+
+async function startGame() {
+  rollButton.disabled =
+    true;
+
+  rollButton.textContent =
+    "LOADING...";
+
+
+  // =================================
+  // AUTH
+  // =================================
+
+  const user =
+    await ensurePlayerAuth();
+
+
+  if (!user) {
+    rollButton.disabled =
+      true;
+
+    rollButton.textContent =
+      "AUTH ERROR";
+
+
+    result.innerHTML = `
+      <p>
+        Could not authenticate player.
+      </p>
+    `;
+
+
+    return;
+  }
+
+
+  // =================================
+  // LEGACY MIGRATION GATE
+  // =================================
+
+  try {
+    await runLegacyMigrationGate();
+  } catch (error) {
+    console.error(
+      "Legacy migration gate failed:",
+      error
+    );
+
+
+    rollButton.disabled =
+      true;
+
+    rollButton.textContent =
+      "ERROR";
+
+
+    result.innerHTML = `
+      <p>
+        Could not check save migration status.
+      </p>
+    `;
+
+
+    return;
+  }
+
+
+  // =================================
+  // LOAD CLOUD GAME STATE
+  // =================================
+
+  await restoreGameState();
+}
+
+
+// =========================================================
+// PAGE EVENTS
+// =========================================================
+
 window.addEventListener(
   "pageshow",
-  restoreGameState
+  async (event) => {
+    // Initial startup is already handled by startGame().
+    //
+    // Only restore here when returning through the
+    // browser's back/forward cache.
+    if (
+      event.persisted
+    ) {
+      await restoreGameState();
+    }
+  }
 );
 
-restoreGameState();
+
+// =========================================================
+// INITIAL START
+// =========================================================
+
+startGame();

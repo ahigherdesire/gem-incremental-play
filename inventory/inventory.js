@@ -14,6 +14,22 @@ import {
   savePlayer
 } from "../src/logic/player.js";
 
+import {
+  ensurePlayerAuth
+} from "../src/backend/auth.js";
+
+import {
+  loadCloudGems,
+  loadCloudPlayerState,
+  toggleCloudGemLock,
+  sellCloudGem,
+  upgradeCloudInventory
+} from "../src/backend/cloudInventory.js";
+
+import {
+  loadCloudEquipment
+} from "../src/backend/cloudEquipment.js";
+
 
 // =========================================================
 // DOM ELEMENTS
@@ -72,6 +88,14 @@ let player =
   loadPlayer() ??
   createPlayer();
 
+let cloudGems = [];
+
+let cloudCapacity = 15;
+
+let cloudMoney = 0;
+
+let cloudEquipment = [];
+
 
 // =========================================================
 // CAPACITY UPGRADES
@@ -79,27 +103,28 @@ let player =
 
 const capacityUpgrades = [
   {
-    capacity: 20,
+    from: 15,
+    to: 20,
     cost: 1000
   },
-
   {
-    capacity: 25,
+    from: 20,
+    to: 25,
     cost: 3000
   },
-
   {
-    capacity: 30,
+    from: 25,
+    to: 30,
     cost: 8000
   },
-
   {
-    capacity: 40,
+    from: 30,
+    to: 40,
     cost: 20000
   },
-
   {
-    capacity: 50,
+    from: 40,
+    to: 50,
     cost: 50000
   }
 ];
@@ -108,18 +133,20 @@ const capacityUpgrades = [
 function getNextCapacityUpgrade() {
   return capacityUpgrades.find(
     (upgrade) =>
-      upgrade.capacity >
-      inventory.capacity
+      upgrade.from ===
+      cloudCapacity
   );
 }
 
 
 function renderCapacityUpgrade() {
   capacityStatus.textContent =
-    `${inventory.capacity} slots`;
+    `${cloudCapacity} slots`;
+
 
   const nextUpgrade =
     getNextCapacityUpgrade();
+
 
   if (!nextUpgrade) {
     capacityUpgradeInfo.textContent =
@@ -134,14 +161,17 @@ function renderCapacityUpgrade() {
     return;
   }
 
+
   capacityUpgradeInfo.textContent =
     `Next upgrade: ` +
-    `${nextUpgrade.capacity} slots — ` +
+    `${nextUpgrade.to} slots — ` +
     `$${nextUpgrade.cost.toLocaleString()}`;
 
+
   capacityUpgradeButton.disabled =
-    player.money <
+    cloudMoney <
     nextUpgrade.cost;
+
 
   capacityUpgradeButton.textContent =
     "Upgrade Capacity";
@@ -210,10 +240,10 @@ function renderGems() {
   inventoryList.innerHTML = "";
 
   inventoryCount.textContent =
-    `${inventory.gems.length} / ${inventory.capacity}`;
+    `${cloudGems.length} / ${cloudCapacity}`;
 
   if (
-    inventory.gems.length === 0
+    cloudGems.length === 0
   ) {
     inventoryList.innerHTML =
       "<p>Your gem inventory is empty.</p>";
@@ -221,8 +251,8 @@ function renderGems() {
     return;
   }
 
-  inventory.gems.forEach(
-    (item, index) => {
+  cloudGems.forEach(
+    (gem) => {
       const card =
         document.createElement(
           "div"
@@ -233,103 +263,136 @@ function renderGems() {
 
       card.innerHTML = `
         <h2>
-          ${item.gem.name}
+          ${gem.gem_name}
         </h2>
 
         <p>
           Rarity:
           1 in
-          ${item.gem.rarity.toLocaleString()}
+          ${gem.rarity.toLocaleString()}
         </p>
 
         <p>
           Weight:
-          ${item.finalWeight.toFixed(2)}g
+          ${gem.final_weight.toFixed(2)}g
+        </p>
+
+        <p>
+          Weight Multiplier:
+          ${gem.rolled_weight_multiplier.toFixed(3)}x
         </p>
 
         <p>
           Value:
-          $${item.value.toFixed(2)}
+          $${gem.value.toFixed(2)}
+        </p>
+
+        <p>
+          ${
+            gem.locked
+              ? "🔒 Locked"
+              : "🔓 Unlocked"
+          }
         </p>
 
         <button
           class="lock-button"
         >
           ${
-            item.locked
-              ? "🔒 Locked"
-              : "🔓 Unlocked"
+            gem.locked
+              ? "🔓 Unlock"
+              : "🔒 Lock"
           }
         </button>
 
         <button
           class="sell-button"
+          ${gem.locked ? "disabled" : ""}
         >
           Sell
         </button>
       `;
 
 
-      // -------------------------
+      // =================================
       // LOCK / UNLOCK
-      // -------------------------
+      // =================================
 
-      card
-        .querySelector(
+      const lockButton =
+        card.querySelector(
           ".lock-button"
-        )
-        .addEventListener(
-          "click",
-          () => {
-            toggleGemLock(
-              inventory,
-              index
-            );
-
-            saveInventory(
-              inventory
-            );
-
-            renderInventory();
-          }
         );
 
+      lockButton.addEventListener(
+        "click",
+        async () => {
+          lockButton.disabled =
+            true;
 
-      // -------------------------
+          const result =
+            await toggleCloudGemLock(
+              gem.id
+            );
+
+          if (!result) {
+            lockButton.disabled =
+              false;
+
+            return;
+          }
+
+          await refreshInventoryPage();
+        }
+      );
+
+
+      // =================================
       // SELL GEM
-      // -------------------------
+      // =================================
 
-      card
-        .querySelector(
+      const sellButton =
+        card.querySelector(
           ".sell-button"
-        )
-        .addEventListener(
-          "click",
-          () => {
-            if (item.locked) {
-              return;
-            }
-
-            player.money +=
-              item.value;
-
-            removeGemFromInventory(
-              inventory,
-              index
-            );
-
-            saveInventory(
-              inventory
-            );
-
-            savePlayer(
-              player
-            );
-
-            renderInventory();
-          }
         );
 
+      sellButton.addEventListener(
+        "click",
+        async () => {
+          // Extra client-side guard.
+          // The server also checks this.
+          if (gem.locked) {
+            return;
+          }
+
+          sellButton.disabled =
+            true;
+
+          lockButton.disabled =
+            true;
+
+          const result =
+            await sellCloudGem(
+              gem.id
+            );
+
+          if (!result) {
+            sellButton.disabled =
+              false;
+
+            lockButton.disabled =
+              false;
+
+            return;
+          }
+
+          await refreshInventoryPage();
+        }
+      );
+
+
+      // =================================
+      // ADD CARD
+      // =================================
 
       inventoryList.appendChild(
         card
@@ -337,7 +400,6 @@ function renderGems() {
     }
   );
 }
-
 
 // =========================================================
 // RENDER EQUIPMENT
@@ -347,7 +409,7 @@ function renderEquipment() {
   equipmentList.innerHTML = "";
 
   if (
-    inventory.equipment.length === 0
+    cloudEquipment.length === 0
   ) {
     equipmentList.innerHTML =
       "<p>You do not own any equipment yet.</p>";
@@ -355,7 +417,7 @@ function renderEquipment() {
     return;
   }
 
-  inventory.equipment.forEach(
+  cloudEquipment.forEach(
     (equipment) => {
       const card =
         document.createElement(
@@ -367,56 +429,49 @@ function renderEquipment() {
 
       const bonuses = [];
 
-
       if (
-        equipment.bonus?.luck
+        equipment.luck_bonus !== 0
       ) {
         bonuses.push(
           `+${(
-            equipment.bonus.luck *
+            equipment.luck_bonus *
             100
           ).toFixed(0)}% Luck`
         );
       }
 
-
       if (
-        equipment.bonus?.rollSpeed
+        equipment.roll_speed_bonus !== 0
       ) {
         bonuses.push(
           `+${(
-            equipment.bonus.rollSpeed *
+            equipment.roll_speed_bonus *
             100
           ).toFixed(0)}% Roll Speed`
         );
       }
 
-
       if (
-        equipment.bonus?.weightLuck
+        equipment.weight_luck_bonus !== 0
       ) {
         bonuses.push(
           `+${(
-            equipment.bonus.weightLuck *
+            equipment.weight_luck_bonus *
             100
           ).toFixed(0)}% Weight Luck`
         );
       }
 
-
       if (
-        equipment.bonus
-          ?.weightMultiplier
+        equipment.weight_multiplier_bonus !== 0
       ) {
         bonuses.push(
           `+${(
-            equipment.bonus
-              .weightMultiplier *
+            equipment.weight_multiplier_bonus *
             100
           ).toFixed(0)}% Weight Multiplier`
         );
       }
-
 
       card.innerHTML = `
         <h2>
@@ -430,7 +485,7 @@ function renderEquipment() {
 
         <p>
           Tier:
-          ${equipment.tier ?? "?"}
+          ${equipment.tier}
         </p>
 
         <p>
@@ -452,7 +507,6 @@ function renderEquipment() {
         </p>
       `;
 
-
       equipmentList.appendChild(
         card
       );
@@ -467,7 +521,7 @@ function renderEquipment() {
 
 function renderInventory() {
   moneyDisplay.textContent =
-    `$${player.money.toFixed(2)}`;
+    `$${cloudMoney.toFixed(2)}`;
 
   renderCapacityUpgrade();
 
@@ -483,45 +537,31 @@ function renderInventory() {
 
 capacityUpgradeButton.addEventListener(
   "click",
-  () => {
-    const nextUpgrade =
-      getNextCapacityUpgrade();
+  async () => {
+    capacityUpgradeButton.disabled =
+      true;
 
-    if (!nextUpgrade) {
+
+    const result =
+      await upgradeCloudInventory();
+
+
+    if (!result) {
+      await refreshInventoryPage();
+
       return;
     }
 
-    if (
-      player.money <
-      nextUpgrade.cost
-    ) {
-      return;
-    }
 
-    player.money -=
-      nextUpgrade.cost;
-
-    inventory.capacity =
-      nextUpgrade.capacity;
-
-    savePlayer(
-      player
-    );
-
-    saveInventory(
-      inventory
-    );
-
-    renderInventory();
+    await refreshInventoryPage();
   }
 );
-
 
 // =========================================================
 // REFRESH SAVED STATE
 // =========================================================
 
-function refreshInventoryPage() {
+async function refreshInventoryPage() {
   inventory =
     loadInventory() ?? {
       capacity: 15,
@@ -532,6 +572,49 @@ function refreshInventoryPage() {
   player =
     loadPlayer() ??
     createPlayer();
+
+
+  const user =
+    await ensurePlayerAuth();
+
+  if (!user) {
+    console.error(
+      "Could not authenticate player."
+    );
+
+    return;
+  }
+
+
+  const loadedGems =
+    await loadCloudGems();
+
+  if (loadedGems) {
+    cloudGems =
+      loadedGems;
+  }
+
+
+  const cloudPlayerState =
+    await loadCloudPlayerState();
+
+  if (cloudPlayerState) {
+    cloudCapacity =
+      cloudPlayerState
+        .inventory_capacity;
+
+    cloudMoney =
+      cloudPlayerState.money;
+  
+    const loadedEquipment =
+      await loadCloudEquipment();
+  
+    if (loadedEquipment) {
+      cloudEquipment =
+        loadedEquipment;
+    }
+  }
+
 
   renderInventory();
 }

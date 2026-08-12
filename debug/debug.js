@@ -1,150 +1,256 @@
-import {
-  loadInventory,
-  loadCraftingState,
-  loadCooldownEnd
-} from "../src/logic/storage.js";
+import recipes
+  from "../src/data/recipes.js";
 
 import {
-  createInventory
-} from "../src/logic/inventory.js";
+  ensurePlayerAuth
+} from "../src/backend/auth.js";
 
 import {
-  createCraftingState
-} from "../src/logic/crafting.js";
+  loadCloudDebugState
+} from "../src/backend/cloudDebug.js";
 
-import {
-  createPlayer,
-  loadPlayer
-} from "../src/logic/player.js";
-
-import {
-  getPlayerStats
-} from "../src/logic/playerStats.js";
 
 const debugStats =
-  document.getElementById("debugStats");
+  document.getElementById(
+    "debugStats"
+  );
 
-function renderDebug() {
-  const inventory =
-    loadInventory() ??
-    createInventory();
 
-  const stats =
-    getPlayerStats(inventory);
+// =========================================================
+// RENDER DEBUG PAGE
+// =========================================================
 
-  const craftingState =
-    loadCraftingState() ??
-    createCraftingState();
+async function renderDebug() {
+  // =================================
+  // AUTH
+  // =================================
 
-  const player =
-    loadPlayer() ??
-    createPlayer();
+  const user =
+    await ensurePlayerAuth();
 
-  const cooldownEnd =
-    loadCooldownEnd();
 
-  const cooldownRemaining =
-    cooldownEnd
-      ? Math.max(
-          0,
-          cooldownEnd - Date.now()
+  if (!user) {
+    debugStats.innerHTML = `
+      <section class="debug-card">
+        <h2>
+          Error
+        </h2>
+
+        <p>
+          Could not authenticate player.
+        </p>
+      </section>
+    `;
+
+    return;
+  }
+
+
+  // =================================
+  // LOAD CLOUD STATE
+  // =================================
+
+  const cloudState =
+    await loadCloudDebugState();
+
+
+  if (!cloudState) {
+    debugStats.innerHTML = `
+      <section class="debug-card">
+        <h2>
+          Error
+        </h2>
+
+        <p>
+          Could not load cloud debug state.
+        </p>
+      </section>
+    `;
+
+    return;
+  }
+
+
+  // =================================
+  // AUTO CRAFT DISPLAY
+  // =================================
+
+  const activeAutoCraftId =
+    cloudState
+      .crafting
+      .activeAutoCraftRecipeId;
+
+
+  const activeAutoCraftRecipe =
+    activeAutoCraftId
+      ? recipes.find(
+          (recipe) =>
+            recipe.id ===
+            activeAutoCraftId
         )
-      : 0;
+      : null;
 
-  const activeRecipe =
-    craftingState
-      .activeAutoCraftRecipeId ??
+
+  const activeAutoCraftText =
+    activeAutoCraftRecipe
+      ?.name ??
+    activeAutoCraftId ??
     "None";
 
+
+  // =================================
+  // RAREST GEM DISPLAY
+  // =================================
+
+  let rarestGemText =
+    "None";
+
+
+  if (
+    cloudState
+      .lifetime
+      .rarestGemName
+  ) {
+    const name =
+      cloudState
+        .lifetime
+        .rarestGemName;
+
+
+    const rarity =
+      cloudState
+        .lifetime
+        .rarestGemRarity;
+
+
+    rarestGemText =
+      rarity
+        ? `${name} (1 in ${rarity.toLocaleString()})`
+        : name;
+  }
+
+
+  // =================================
+  // RENDER PAGE
+  // =================================
+
   debugStats.innerHTML = `
-    <div class="debug-card">
-      <h2>Player Stats</h2>
+    <section class="debug-card">
+      <h2>
+        Player Stats
+      </h2>
 
       <p>
         Luck:
-        ${stats.luck.toFixed(2)}x
+        ${cloudState.stats.luck.toFixed(2)}x
       </p>
 
       <p>
         Roll Speed:
-        ${stats.rollSpeed.toFixed(2)}x
+        ${cloudState.stats.rollSpeed.toFixed(2)}x
       </p>
 
       <p>
         Weight Luck:
-        ${stats.weightLuck.toFixed(2)}x
+        ${cloudState.stats.weightLuck.toFixed(2)}x
       </p>
 
       <p>
         Weight Multiplier:
-        ${stats.weightMultiplier.toFixed(2)}x
+        ${cloudState.stats.weightMultiplier.toFixed(2)}x
       </p>
-    </div>
+    </section>
 
-    <div class="debug-card">
-      <h2>Player</h2>
+
+    <section class="debug-card">
+      <h2>
+        Player
+      </h2>
 
       <p>
         Money:
-        $${player.money.toFixed(2)}
+        $${cloudState.player.money.toFixed(2)}
       </p>
 
       <p>
         Gems:
-        ${inventory.gems.length}
+        ${cloudState.player.gemCount}
         /
-        ${inventory.capacity}
+        ${cloudState.player.inventoryCapacity}
       </p>
 
       <p>
         Equipment Owned:
-        ${inventory.equipment.length}
+        ${cloudState.player.equipmentCount}
       </p>
-    </div>
+    </section>
 
-    <div class="debug-card">
-      <h2>Crafting</h2>
+
+    <section class="debug-card">
+      <h2>
+        Crafting
+      </h2>
 
       <p>
         Active Auto Craft:
-        ${activeRecipe}
+        ${activeAutoCraftText}
       </p>
-    </div>
+    </section>
 
-    <div class="debug-card">
-      <h2>Rolling</h2>
+
+    <section class="debug-card">
+      <h2>
+        Rolling
+      </h2>
 
       <p>
         Cooldown Remaining:
-        ${(cooldownRemaining / 1000).toFixed(1)}s
+        ${cloudState.rolling.cooldownRemaining.toFixed(1)}s
       </p>
-    </div>
-    <div class="debug-card">
-      <h2>Lifetime Stats</h2>
-    
+    </section>
+
+
+    <section class="debug-card">
+      <h2>
+        Lifetime Stats
+      </h2>
+
       <p>
         Total Rolls:
-        ${player.stats?.totalRolls ?? 0}
+        ${cloudState.lifetime.totalRolls.toLocaleString()}
       </p>
-    
+
       <p>
         Rarest Gem:
-        ${
-          player.stats?.rarestGem
-            ? `
-              ${player.stats.rarestGem.name}
-              (1 in ${player.stats.rarestGem.rarity.toLocaleString()})
-            `
-            : "None yet"
-        }
+        ${rarestGemText}
       </p>
-    </div>
+    </section>
   `;
 }
 
+
+// =========================================================
+// INITIAL LOAD
+// =========================================================
+
 renderDebug();
+
+
+// =========================================================
+// REFRESH WHEN RETURNING TO PAGE
+// =========================================================
+
+window.addEventListener(
+  "pageshow",
+  renderDebug
+);
+
+
+// =========================================================
+// LIVE DEBUG REFRESH
+// =========================================================
 
 setInterval(
   renderDebug,
-  100
+  500
 );
