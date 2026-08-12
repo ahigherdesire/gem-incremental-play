@@ -1,3 +1,6 @@
+import recipes
+  from "./src/data/recipes.js";
+
 import {
   ensurePlayerAuth
 } from "./src/backend/auth.js";
