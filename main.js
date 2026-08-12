@@ -431,36 +431,67 @@ async function performServerRoll() {
   // DISPLAY RESULT
   // =======================================================
 
+  const autoDeposited =
+    data.autoCraft?.deposited ===
+    true;
+  
+  const autoCraftRecipe =
+    autoDeposited
+      ? recipes.find(
+          (recipe) =>
+            recipe.id ===
+            data.autoCraft.recipeId
+        )
+      : null;
+  
+  const autoCraftName =
+    autoCraftRecipe?.name ??
+    data.autoCraft?.recipeId ??
+    "crafting";
+  
+  
   result.innerHTML = `
     <h2>
       ${rolled.gem.name}
     </h2>
-
+  
     <p>
       Rarity:
       1 in
       ${rolled.gem.rarity.toLocaleString()}
     </p>
-
+  
     <p>
       Weight:
       ${rolled.finalWeight.toFixed(2)}g
       (${rolled.weightMultiplier.toFixed(3)}x)
     </p>
-
+  
     <p>
       Value:
       $${rolled.value.toFixed(2)}
     </p>
-
-    <p>
-      Inventory:
-      ${data.inventory.count}
-      /
-      ${data.inventory.capacity}
-    </p>
+  
+    ${
+      autoDeposited
+        ? `
+          <p>
+            Auto-deposited into
+            <strong>
+              ${autoCraftName}
+            </strong>.
+          </p>
+        `
+        : `
+          <p>
+            Inventory:
+            ${data.inventory.count}
+            /
+            ${data.inventory.capacity}
+          </p>
+        `
+    }
   `;
-
 
   // =======================================================
   // SERVER COOLDOWN
