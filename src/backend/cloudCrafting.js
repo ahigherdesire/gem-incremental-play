@@ -102,3 +102,33 @@ export async function manuallyDepositCloudRequirement(
 
   return data;
 }
+
+export async function craftCloudRecipe(
+  recipeId
+) {
+  const {
+    data,
+    error
+  } =
+    await supabase
+      .functions
+      .invoke(
+        "craft-recipe",
+        {
+          body: {
+            recipeId
+          }
+        }
+      );
+
+  if (error) {
+    console.error(
+      "Cloud craft failed:",
+      error
+    );
+
+    return null;
+  }
+
+  return data;
+}
