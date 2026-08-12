@@ -20,8 +20,9 @@ import {
 
 import {
   loadCloudGems,
-  loadCloudCapacity,
-  toggleCloudGemLock
+  loadCloudPlayerState,
+  toggleCloudGemLock,
+  sellCloudGem
 } from "../src/backend/cloudInventory.js";
 
 
@@ -85,6 +86,8 @@ let player =
 let cloudGems = [];
 
 let cloudCapacity = 15;
+
+let cloudMoney = 0;
 
 
 // =========================================================
@@ -447,7 +450,7 @@ function renderEquipment() {
 
 function renderInventory() {
   moneyDisplay.textContent =
-    `$${player.money.toFixed(2)}`;
+    `$${cloudMoney.toFixed(2)}`;
 
   renderCapacityUpgrade();
 
@@ -502,11 +505,6 @@ capacityUpgradeButton.addEventListener(
 // =========================================================
 
 async function refreshInventoryPage() {
-  // ---------------------------------
-  // LOCAL STATE
-  // Equipment and money still use this.
-  // ---------------------------------
-
   inventory =
     loadInventory() ?? {
       capacity: 15,
@@ -518,10 +516,6 @@ async function refreshInventoryPage() {
     loadPlayer() ??
     createPlayer();
 
-
-  // ---------------------------------
-  // AUTHENTICATE CLOUD PLAYER
-  // ---------------------------------
 
   const user =
     await ensurePlayerAuth();
@@ -535,10 +529,6 @@ async function refreshInventoryPage() {
   }
 
 
-  // ---------------------------------
-  // LOAD CLOUD GEM INVENTORY
-  // ---------------------------------
-
   const loadedGems =
     await loadCloudGems();
 
@@ -548,18 +538,16 @@ async function refreshInventoryPage() {
   }
 
 
-  // ---------------------------------
-  // LOAD SERVER CAPACITY
-  // ---------------------------------
+  const cloudPlayerState =
+    await loadCloudPlayerState();
 
-  const loadedCapacity =
-    await loadCloudCapacity();
-
-  if (
-    loadedCapacity !== null
-  ) {
+  if (cloudPlayerState) {
     cloudCapacity =
-      loadedCapacity;
+      cloudPlayerState
+        .inventory_capacity;
+
+    cloudMoney =
+      cloudPlayerState.money;
   }
 
 
