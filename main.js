@@ -9,6 +9,11 @@ import {
   supabase
 } from "./src/backend/supabase.js";
 
+import {
+  runLegacyMigrationGate
+} from "./src/backend/legacyMigration.js";
+
+
 const rollButton =
   document.getElementById(
     "rollButton"
@@ -196,21 +201,6 @@ function startCooldown(
 // =========================================================
 
 async function restoreGameState() {
-  const user =
-    await ensurePlayerAuth();
-
-
-  if (!user) {
-    rollButton.disabled =
-      true;
-
-    rollButton.textContent =
-      "AUTH ERROR";
-
-    return;
-  }
-
-
   const state =
     await loadServerRollState();
 
@@ -412,7 +402,8 @@ async function performServerRoll() {
   const autoDeposited =
     data.autoCraft?.deposited ===
     true;
-  
+
+
   const autoCraftRecipe =
     autoDeposited
       ? recipes.find(
@@ -421,35 +412,36 @@ async function performServerRoll() {
             data.autoCraft.recipeId
         )
       : null;
-  
+
+
   const autoCraftName =
     autoCraftRecipe?.name ??
     data.autoCraft?.recipeId ??
     "crafting";
-  
-  
+
+
   result.innerHTML = `
     <h2>
       ${rolled.gem.name}
     </h2>
-  
+
     <p>
       Rarity:
       1 in
       ${rolled.gem.rarity.toLocaleString()}
     </p>
-  
+
     <p>
       Weight:
       ${rolled.finalWeight.toFixed(2)}g
       (${rolled.weightMultiplier.toFixed(3)}x)
     </p>
-  
+
     <p>
       Value:
       $${rolled.value.toFixed(2)}
     </p>
-  
+
     ${
       autoDeposited
         ? `
@@ -468,6 +460,7 @@ async function performServerRoll() {
         `
     }
   `;
+
 
   // =======================================================
   // SERVER COOLDOWN
@@ -496,12 +489,6 @@ async function performServerRoll() {
 rollButton.addEventListener(
   "click",
   async (event) => {
-    // This is no longer a security
-    // mechanism — the server enforces
-    // everything important.
-    //
-    // We can still ignore synthetic
-    // clicks for normal UI behaviour.
     if (!event.isTrusted) {
       return;
     }
@@ -513,13 +500,106 @@ rollButton.addEventListener(
 
 
 // =========================================================
+// START GAME
+// =========================================================
+
+async function startGame() {
+  rollButton.disabled =
+    true;
+
+  rollButton.textContent =
+    "LOADING...";
+
+
+  // =================================
+  // AUTH
+  // =================================
+
+  const user =
+    await ensurePlayerAuth();
+
+
+  if (!user) {
+    rollButton.disabled =
+      true;
+
+    rollButton.textContent =
+      "AUTH ERROR";
+
+
+    result.innerHTML = `
+      <p>
+        Could not authenticate player.
+      </p>
+    `;
+
+
+    return;
+  }
+
+
+  // =================================
+  // LEGACY MIGRATION GATE
+  // =================================
+
+  try {
+    await runLegacyMigrationGate();
+  } catch (error) {
+    console.error(
+      "Legacy migration gate failed:",
+      error
+    );
+
+
+    rollButton.disabled =
+      true;
+
+    rollButton.textContent =
+      "ERROR";
+
+
+    result.innerHTML = `
+      <p>
+        Could not check save migration status.
+      </p>
+    `;
+
+
+    return;
+  }
+
+
+  // =================================
+  // LOAD CLOUD GAME STATE
+  // =================================
+
+  await restoreGameState();
+}
+
+
+// =========================================================
 // PAGE EVENTS
 // =========================================================
 
 window.addEventListener(
   "pageshow",
-  restoreGameState
+  async (event) => {
+    // Initial startup is already handled
+    // by startGame().
+    //
+    // pageshow is mainly useful when returning
+    // through browser back/forward cache.
+    if (
+      event.persisted
+    ) {
+      await restoreGameState();
+    }
+  }
 );
 
 
-restoreGameState();
+// =========================================================
+// INITIAL START
+// =========================================================
+
+startGame();
