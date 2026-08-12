@@ -83,38 +83,44 @@ export function resetSessionCache() {
 // for this fallback.
 // =========================================================
 
-// Postgres duplicate-key. Two tabs starting at once is fine:
-// whichever loses the race just reuses the existing row.
-const UNIQUE_VIOLATION = "23505";
+// Startup and the auth-state listener can both reach this at the
+// same time; one request per player is enough.
+const recordChecks = new Map();
 
 
-export async function ensurePlayerRecord(user) {
+export function ensurePlayerRecord(user) {
   if (!user?.id) {
-    return false;
+    return Promise.resolve(false);
   }
 
-  const { data, error } = await supabase
+  let pending = recordChecks.get(user.id);
+
+  if (!pending) {
+    pending = createPlayerRecord(user.id).catch((error) => {
+      recordChecks.delete(user.id);
+
+      throw error;
+    });
+
+    recordChecks.set(user.id, pending);
+  }
+
+  return pending;
+}
+
+
+async function createPlayerRecord(playerId) {
+  // An upsert that ignores duplicates is idempotent, so a row
+  // that already exists is left untouched and concurrent callers
+  // do not collide.
+  const { error } = await supabase
     .from("players")
-    .select("id")
-    .eq("id", user.id)
-    .maybeSingle();
+    .upsert({ id: playerId }, { onConflict: "id", ignoreDuplicates: true });
 
   if (error) {
-    console.error("Could not read player record:", error);
+    console.error("Could not create player record:", error);
 
-    return false;
-  }
-
-  if (data) {
-    return true;
-  }
-
-  const { error: insertError } = await supabase
-    .from("players")
-    .insert({ id: user.id });
-
-  if (insertError && insertError.code !== UNIQUE_VIOLATION) {
-    console.error("Could not create player record:", insertError);
+    recordChecks.delete(playerId);
 
     return false;
   }
