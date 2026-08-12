@@ -127,3 +127,31 @@ export async function sellCloudGem(
 
   return data;
 }
+
+export async function upgradeCloudInventory() {
+  const {
+    data,
+    error
+  } =
+    await supabase
+      .functions
+      .invoke(
+        "upgrade-inventory",
+        {
+          body: {}
+        }
+      );
+
+
+  if (error) {
+    console.error(
+      "Failed to upgrade inventory:",
+      error
+    );
+
+    return null;
+  }
+
+
+  return data;
+}
