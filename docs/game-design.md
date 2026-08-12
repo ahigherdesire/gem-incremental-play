@@ -391,7 +391,7 @@ Total:
 
 Cooldown:
 
-~`4.76s`
+~`2.86s`
 
 Recipe:
 
@@ -411,7 +411,7 @@ Total:
 
 Cooldown:
 
-~`4.55s`
+~`2.73s`
 
 Recipe:
 
@@ -432,7 +432,7 @@ Total:
 
 Cooldown:
 
-**4.00s**
+`2.40s`
 
 Recipe:
 
@@ -450,7 +450,7 @@ Total:
 
 Cooldown:
 
-~`3.57s`
+~`2.14s`
 
 ### Recipe gimmick: Heavy specimens
 
@@ -487,7 +487,7 @@ Total:
 
 Cooldown:
 
-~`3.125s`
+**1.875s**
 
 ### Recipe gimmick: Rarity milestone set
 
