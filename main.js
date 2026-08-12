@@ -2,7 +2,8 @@ import recipes
   from "./src/data/recipes.js";
 
 import {
-  ensurePlayerAuth
+  ensurePlayerAuth,
+  getLastAuthError
 } from "./src/backend/auth.js";
 
 import {
@@ -80,9 +81,6 @@ async function loadServerRollState() {
 
   // A completely fresh anonymous user may not
   // have a row in public.players yet.
-  //
-  // Treat that as the default starting state
-  // instead of an error.
   if (!playerResult.data) {
     return {
       capacity:
@@ -512,8 +510,6 @@ async function performServerRoll() {
 rollButton.addEventListener(
   "click",
   async (event) => {
-    // This is only normal UI behaviour.
-    // The server remains authoritative.
     if (!event.isTrusted) {
       return;
     }
@@ -545,6 +541,10 @@ async function startGame() {
 
 
   if (!user) {
+    const authError =
+      getLastAuthError();
+
+
     rollButton.disabled =
       true;
 
@@ -553,9 +553,54 @@ async function startGame() {
 
 
     result.innerHTML = `
+      <h2>
+        Authentication Error
+      </h2>
+
       <p>
         Could not authenticate player.
       </p>
+
+      ${
+        authError
+          ? `
+            <hr>
+
+            <p>
+              <strong>
+                Stage:
+              </strong>
+              ${authError.stage ?? "Unknown"}
+            </p>
+
+            <p>
+              <strong>
+                Status:
+              </strong>
+              ${authError.status ?? "Unknown"}
+            </p>
+
+            <p>
+              <strong>
+                Code:
+              </strong>
+              ${authError.code ?? "Unknown"}
+            </p>
+
+            <p>
+              <strong>
+                Message:
+              </strong>
+              ${authError.message ?? "Unknown error"}
+            </p>
+          `
+          : `
+            <p>
+              No additional error information
+              was provided.
+            </p>
+          `
+      }
     `;
 
 
@@ -609,10 +654,6 @@ async function startGame() {
 window.addEventListener(
   "pageshow",
   async (event) => {
-    // Initial startup is already handled by startGame().
-    //
-    // Only restore here when returning through the
-    // browser's back/forward cache.
     if (
       event.persisted
     ) {

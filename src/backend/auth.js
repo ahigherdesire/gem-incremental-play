@@ -3,15 +3,36 @@ import {
 } from "./supabase.js";
 
 
+let lastAuthError =
+  null;
+
+
+// =========================================================
+// GET LAST AUTH ERROR
+// =========================================================
+
+export function getLastAuthError() {
+  return lastAuthError;
+}
+
+
+// =========================================================
+// AUTHENTICATE PLAYER
+// =========================================================
+
 export async function ensurePlayerAuth() {
+  lastAuthError =
+    null;
+
+
   console.log(
     "[AUTH] Checking existing session..."
   );
 
 
-  // =========================================================
-  // CHECK EXISTING SESSION
-  // =========================================================
+  // =======================================================
+  // EXISTING SESSION
+  // =======================================================
 
   const {
     data: sessionData,
@@ -22,34 +43,37 @@ export async function ensurePlayerAuth() {
 
 
   if (sessionError) {
+    lastAuthError = {
+      stage:
+        "getSession",
+
+      name:
+        sessionError.name ??
+        null,
+
+      message:
+        sessionError.message ??
+        "Unknown session error.",
+
+      status:
+        sessionError.status ??
+        null,
+
+      code:
+        sessionError.code ??
+        null
+    };
+
+
     console.error(
       "[AUTH] Failed to load Supabase session:",
-      {
-        name:
-          sessionError.name,
-
-        message:
-          sessionError.message,
-
-        status:
-          sessionError.status,
-
-        code:
-          sessionError.code,
-
-        fullError:
-          sessionError
-      }
+      lastAuthError
     );
 
 
     return null;
   }
 
-
-  // =========================================================
-  // EXISTING USER
-  // =========================================================
 
   if (
     sessionData.session?.user
@@ -66,9 +90,9 @@ export async function ensurePlayerAuth() {
   }
 
 
-  // =========================================================
+  // =======================================================
   // CREATE ANONYMOUS USER
-  // =========================================================
+  // =======================================================
 
   console.log(
     "[AUTH] No session found. Creating anonymous user..."
@@ -84,24 +108,31 @@ export async function ensurePlayerAuth() {
 
 
   if (error) {
+    lastAuthError = {
+      stage:
+        "signInAnonymously",
+
+      name:
+        error.name ??
+        null,
+
+      message:
+        error.message ??
+        "Unknown anonymous sign-in error.",
+
+      status:
+        error.status ??
+        null,
+
+      code:
+        error.code ??
+        null
+    };
+
+
     console.error(
       "[AUTH] Anonymous sign-in failed:",
-      {
-        name:
-          error.name,
-
-        message:
-          error.message,
-
-        status:
-          error.status,
-
-        code:
-          error.code,
-
-        fullError:
-          error
-      }
+      lastAuthError
     );
 
 
@@ -110,6 +141,24 @@ export async function ensurePlayerAuth() {
 
 
   if (!data.user) {
+    lastAuthError = {
+      stage:
+        "signInAnonymously",
+
+      name:
+        "MissingUser",
+
+      message:
+        "Supabase returned no user after anonymous sign-in.",
+
+      status:
+        null,
+
+      code:
+        null
+    };
+
+
     console.error(
       "[AUTH] Anonymous sign-in returned no user."
     );
