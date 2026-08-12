@@ -68,3 +68,37 @@ export async function loadCloudCraftingState() {
     progress
   };
 }
+
+export async function manuallyDepositCloudRequirement(
+  recipeId,
+  requirementIndex
+) {
+  const {
+    data,
+    error
+  } =
+    await supabase
+      .functions
+      .invoke(
+        "manual-deposit",
+        {
+          body: {
+            recipeId,
+            requirementIndex
+          }
+        }
+      );
+
+
+  if (error) {
+    console.error(
+      "Cloud manual deposit failed:",
+      error
+    );
+
+    return null;
+  }
+
+
+  return data;
+}
