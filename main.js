@@ -9,13 +9,6 @@ import {
   supabase
 } from "./src/backend/supabase.js";
 
-import {
-  createPlayer,
-  loadPlayer,
-  recordRoll
-} from "./src/logic/player.js";
-
-
 const rollButton =
   document.getElementById(
     "rollButton"
@@ -25,11 +18,6 @@ const result =
   document.getElementById(
     "result"
   );
-
-
-let player =
-  loadPlayer() ??
-  createPlayer();
 
 let cooldownTimer =
   null;
@@ -415,19 +403,6 @@ async function performServerRoll() {
     value:
       data.value
   };
-
-
-  // =======================================================
-  // TEMPORARY LOCAL LIFETIME STATS
-  //
-  // Total Rolls / Rarest Gem / Gem Index
-  // have not been migrated yet.
-  // =======================================================
-
-  recordRoll(
-    player,
-    rolled
-  );
 
 
   // =======================================================
