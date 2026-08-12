@@ -14,6 +14,15 @@ import {
   savePlayer
 } from "../src/logic/player.js";
 
+import {
+  ensurePlayerAuth
+} from "../src/backend/auth.js";
+
+import {
+  loadCloudGems,
+  loadCloudCapacity
+} from "../src/backend/cloudInventory.js";
+
 
 // =========================================================
 // DOM ELEMENTS
@@ -72,6 +81,10 @@ let player =
   loadPlayer() ??
   createPlayer();
 
+let cloudGems = [];
+
+let cloudCapacity = 15;
+
 
 // =========================================================
 // CAPACITY UPGRADES
@@ -116,32 +129,13 @@ function getNextCapacityUpgrade() {
 
 function renderCapacityUpgrade() {
   capacityStatus.textContent =
-    `${inventory.capacity} slots`;
-
-  const nextUpgrade =
-    getNextCapacityUpgrade();
-
-  if (!nextUpgrade) {
-    capacityUpgradeInfo.textContent =
-      "Maximum capacity reached.";
-
-    capacityUpgradeButton.disabled =
-      true;
-
-    capacityUpgradeButton.textContent =
-      "MAXED";
-
-    return;
-  }
+    `${cloudCapacity} slots`;
 
   capacityUpgradeInfo.textContent =
-    `Next upgrade: ` +
-    `${nextUpgrade.capacity} slots — ` +
-    `$${nextUpgrade.cost.toLocaleString()}`;
+    "Capacity upgrades are temporarily unavailable during cloud migration.";
 
   capacityUpgradeButton.disabled =
-    player.money <
-    nextUpgrade.cost;
+    true;
 
   capacityUpgradeButton.textContent =
     "Upgrade Capacity";
@@ -210,10 +204,11 @@ function renderGems() {
   inventoryList.innerHTML = "";
 
   inventoryCount.textContent =
-    `${inventory.gems.length} / ${inventory.capacity}`;
+    `${cloudGems.length} / ${cloudCapacity}`;
+
 
   if (
-    inventory.gems.length === 0
+    cloudGems.length === 0
   ) {
     inventoryList.innerHTML =
       "<p>Your gem inventory is empty.</p>";
@@ -221,8 +216,9 @@ function renderGems() {
     return;
   }
 
-  inventory.gems.forEach(
-    (item, index) => {
+
+  cloudGems.forEach(
+    (gem) => {
       const card =
         document.createElement(
           "div"
@@ -231,69 +227,57 @@ function renderGems() {
       card.className =
         "inventory-item";
 
+
       card.innerHTML = `
         <h2>
-          ${item.gem.name}
+          ${gem.gem_name}
         </h2>
 
         <p>
           Rarity:
           1 in
-          ${item.gem.rarity.toLocaleString()}
+          ${gem.rarity.toLocaleString()}
         </p>
 
         <p>
           Weight:
-          ${item.finalWeight.toFixed(2)}g
+          ${gem.final_weight.toFixed(2)}g
+        </p>
+
+        <p>
+          Weight Multiplier:
+          ${gem.rolled_weight_multiplier.toFixed(3)}x
         </p>
 
         <p>
           Value:
-          $${item.value.toFixed(2)}
+          $${gem.value.toFixed(2)}
         </p>
 
-        <button
-          class="lock-button"
-        >
+        <p>
           ${
-            item.locked
+            gem.locked
               ? "🔒 Locked"
               : "🔓 Unlocked"
           }
+        </p>
+
+        <button disabled>
+          Lock / Unlock
         </button>
 
-        <button
-          class="sell-button"
-        >
+        <button disabled>
           Sell
         </button>
       `;
 
 
-      // -------------------------
-      // LOCK / UNLOCK
-      // -------------------------
-
-      card
-        .querySelector(
-          ".lock-button"
-        )
-        .addEventListener(
-          "click",
-          () => {
-            toggleGemLock(
-              inventory,
-              index
-            );
-
-            saveInventory(
-              inventory
-            );
-
-            renderInventory();
-          }
-        );
-
+      inventoryList.appendChild(
+        card
+      );
+    }
+  );
+}
 
       // -------------------------
       // SELL GEM
@@ -521,7 +505,12 @@ capacityUpgradeButton.addEventListener(
 // REFRESH SAVED STATE
 // =========================================================
 
-function refreshInventoryPage() {
+async function refreshInventoryPage() {
+  // ---------------------------------
+  // LOCAL STATE
+  // Equipment and money still use this.
+  // ---------------------------------
+
   inventory =
     loadInventory() ?? {
       capacity: 15,
@@ -532,6 +521,51 @@ function refreshInventoryPage() {
   player =
     loadPlayer() ??
     createPlayer();
+
+
+  // ---------------------------------
+  // AUTHENTICATE CLOUD PLAYER
+  // ---------------------------------
+
+  const user =
+    await ensurePlayerAuth();
+
+  if (!user) {
+    console.error(
+      "Could not authenticate player."
+    );
+
+    return;
+  }
+
+
+  // ---------------------------------
+  // LOAD CLOUD GEM INVENTORY
+  // ---------------------------------
+
+  const loadedGems =
+    await loadCloudGems();
+
+  if (loadedGems) {
+    cloudGems =
+      loadedGems;
+  }
+
+
+  // ---------------------------------
+  // LOAD SERVER CAPACITY
+  // ---------------------------------
+
+  const loadedCapacity =
+    await loadCloudCapacity();
+
+  if (
+    loadedCapacity !== null
+  ) {
+    cloudCapacity =
+      loadedCapacity;
+  }
+
 
   renderInventory();
 }
