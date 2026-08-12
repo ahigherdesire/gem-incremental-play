@@ -7,6 +7,10 @@ import {
 } from "./src/backend/auth.js";
 
 import {
+  ensureCloudPlayer
+} from "./src/backend/playerCloud.js";
+
+import {
   supabase
 } from "./src/backend/supabase.js";
 
@@ -33,7 +37,7 @@ let cooldownTimer =
 // LOAD SERVER ROLL STATE
 // =========================================================
 
-async function loadServerRollState() {
+async function loadServerRollState(userId) {
   const [
     playerResult,
     inventoryResult
@@ -45,6 +49,10 @@ async function loadServerRollState() {
           inventory_capacity,
           next_roll_at
         `)
+        .eq(
+          "id",
+          userId
+        )
         .maybeSingle(),
 
       supabase
@@ -120,8 +128,17 @@ async function loadServerRollState() {
 // =========================================================
 
 async function showReadyButton() {
-  const state =
-    await loadServerRollState();
+  const {
+  data: {
+    user
+  }
+} =
+  await supabase.auth.getUser();
+
+const state =
+  await loadServerRollState(
+    user?.id
+  );
 
 
   if (!state) {
@@ -222,8 +239,17 @@ function startCooldown(
 // =========================================================
 
 async function restoreGameState() {
-  const state =
-    await loadServerRollState();
+  const {
+  data: {
+    user
+  }
+} =
+  await supabase.auth.getUser();
+
+const state =
+  await loadServerRollState(
+    user?.id
+  );
 
 
   if (!state) {
@@ -606,7 +632,32 @@ async function startGame() {
 
     return;
   }
+  // =================================
+  // ENSURE CLOUD PLAYER EXISTS
+  // =================================
 
+  const cloudPlayer =
+    await ensureCloudPlayer(user);
+
+  if (!cloudPlayer) {
+    rollButton.disabled =
+      true;
+
+    rollButton.textContent =
+      "SAVE ERROR";
+
+    result.innerHTML = `
+      <h2>
+        Save Error
+      </h2>
+
+      <p>
+        Could not create or load your cloud save.
+      </p>
+    `;
+
+    return;
+  }
 
   // =================================
   // LEGACY MIGRATION GATE
