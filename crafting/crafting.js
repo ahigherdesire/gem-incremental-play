@@ -789,8 +789,7 @@ function renderRecipes() {
 
     if (!owned) {
       // -----------------------------------------------------
-      // AUTO CRAFT
-      // STILL TEMPORARILY DISABLED
+      // CLOUD AUTO CRAFT TARGET
       // -----------------------------------------------------
 
       const autoCraftButton =
@@ -802,11 +801,56 @@ function renderRecipes() {
       autoCraftButton
         ?.addEventListener(
           "click",
-          () => {
-            console.warn(
-              "Auto Craft is temporarily disabled during cloud migration.",
-              recipe.id
+          async () => {
+            autoCraftButton.disabled =
+              true;
+
+
+            const currentlyEnabled =
+              craftingState
+                .activeAutoCraftRecipeId ===
+              recipe.id;
+
+
+            const newRecipeId =
+              currentlyEnabled
+                ? null
+                : recipe.id;
+
+
+            const result =
+              await setCloudAutoCraft(
+                newRecipeId
+              );
+
+
+            if (!result) {
+              autoCraftButton.disabled =
+                false;
+
+              return;
+            }
+
+
+            console.log(
+              "Cloud Auto Craft:",
+              result
             );
+
+
+            const loaded =
+              await loadCraftingPageState();
+
+
+            if (!loaded) {
+              autoCraftButton.disabled =
+                false;
+
+              return;
+            }
+
+
+            renderRecipes();
           }
         );
 
